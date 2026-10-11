@@ -19,7 +19,9 @@ uniform float uFade;
 
 const float PI = 3.14159265;
 const float FOLDS = 7.0;
-const float SIZE = 1.6;
+const float SIZE = 2.0;
+// Stroke weight, scaled down so lines stay fine at a large SIZE.
+const float LINE = 0.5;
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -63,17 +65,17 @@ vec2 fold(vec2 p) {
 }
 
 float sigil(vec2 uv, float t) {
-  float k = 0.012;
+  float k = 0.007;
   float breathe = 1.0 + 0.04 * sin(t * 0.5);
   float r = length(uv);
   float ang = atan(uv.y, uv.x);
 
   // Wobbling centre and a pair of framing rings.
-  float d = r - (0.05 * breathe + 0.006 * sin(ang * 3.0 + t * 0.8));
+  float d = r - (0.035 * breathe + 0.004 * sin(ang * 3.0 + t * 0.8));
   float ring1 = 0.40 * breathe + 0.010 * sin(ang * 5.0 + t * 0.4) + 0.006 * sin(ang * 8.0 - t * 0.6);
   float ring2 = 0.43 * breathe + 0.008 * sin(ang * 6.0 - t * 0.35);
-  d = min(d, abs(r - ring1) - 0.005);
-  d = min(d, abs(r - ring2) - 0.002);
+  d = min(d, abs(r - ring1) - 0.005 * LINE);
+  d = min(d, abs(r - ring2) - 0.002 * LINE);
 
   // A lightly warped, folded domain for the spokes.
   vec2 warp = vec2(noise(uv * 6.0 + t * 0.15), noise(uv * 6.0 + vec2(5.2, 1.3) - t * 0.12)) - 0.5;
@@ -85,24 +87,24 @@ float sigil(vec2 uv, float t) {
   for (int j = 1; j <= 4; j++) {
     float tj = float(j) / 4.0;
     vec2 cur = vec2(mix(0.065, 0.34, tj), tj * tj * 0.018 * sin(t * 0.6 + float(j) * 1.7));
-    spoke = smin(spoke, sdLine(fp, prev, cur, mix(0.0035, 0.0015, tj)), k * 0.5);
+    spoke = smin(spoke, sdLine(fp, prev, cur, mix(0.0035, 0.0015, tj) * LINE), k * 0.5);
     prev = cur;
   }
   d = smin(d, spoke, k);
-  d = smin(d, length(fp - prev) - 0.008, k);
+  d = smin(d, length(fp - prev) - 0.0055, k);
 
   // Two side branches, each ending in a node.
   vec2 b1 = vec2(0.185, 0.024 + 0.008 * sin(t * 0.5));
-  d = smin(d, sdLine(fp, vec2(0.15, 0.0), b1, 0.002), k);
-  d = smin(d, length(fp - b1) - 0.005, k);
+  d = smin(d, sdLine(fp, vec2(0.15, 0.0), b1, 0.002 * LINE), k);
+  d = smin(d, length(fp - b1) - 0.0035, k);
   vec2 b2 = vec2(0.27, 0.02 + 0.006 * sin(t * 0.4 + 2.0));
-  d = smin(d, sdLine(fp, vec2(0.25, 0.0), b2, 0.0018), k);
-  d = smin(d, length(fp - b2) - 0.004, k);
+  d = smin(d, sdLine(fp, vec2(0.25, 0.0), b2, 0.0018 * LINE), k);
+  d = smin(d, length(fp - b2) - 0.003, k);
 
   // Arcs between the spokes, drifting in opposite directions.
   float sector = PI / FOLDS;
-  d = smin(d, sdArc(fold(rot(t * 0.07) * uv), 0.17 * breathe, sector * (0.7 + 0.12 * sin(t * 0.4)), 0.003), k * 0.6);
-  d = smin(d, sdArc(fold(rot(-t * 0.05) * uv), 0.30 * breathe, sector * (0.55 + 0.1 * sin(t * 0.3)), 0.0025), k * 0.6);
+  d = smin(d, sdArc(fold(rot(t * 0.07) * uv), 0.17 * breathe, sector * (0.7 + 0.12 * sin(t * 0.4)), 0.003 * LINE), k * 0.6);
+  d = smin(d, sdArc(fold(rot(-t * 0.05) * uv), 0.30 * breathe, sector * (0.55 + 0.1 * sin(t * 0.3)), 0.0025 * LINE), k * 0.6);
 
   return d;
 }
@@ -116,8 +118,8 @@ void main() {
 
   // Crisp core plus layered glow, in the card's gold.
   vec3 gold = vec3(0.83, 0.69, 0.37);
-  float edge = smoothstep(0.003, 0.0, d);
-  float g1 = 0.004 / (abs(d) + 0.004);
+  float edge = smoothstep(0.0015, 0.0, d);
+  float g1 = 0.0025 / (abs(d) + 0.0025);
   float g2 = 0.025 / (abs(d) + 0.025) * 0.22;
   vec3 col = gold * (edge * 1.2 + g1 * 0.8 + g2 * 0.5);
   col += vec3(0.08, 0.02, -0.04) * sin(atan(uv.y, uv.x) * 3.0 + t * 0.2) * g1 * 0.4;
