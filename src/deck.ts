@@ -23,22 +23,28 @@ export interface Arcanum {
   blurb: string
 }
 
-export const LEVELS: Arcanum[] = [
+/** Which card-back sigil a level's face-down cards show. */
+export type Sigil = 'fool' | 'lovers' | 'star'
+
+export const LEVELS: (Arcanum & { sigil: Sigil })[] = [
   {
     numeral: '0',
     title: 'The Fool',
+    sigil: 'fool',
     theme: 'Perception',
     blurb: 'Begin with first impressions. Guess boldly, then find out how close you came.',
   },
   {
     numeral: 'VI',
     title: 'The Lovers',
+    sigil: 'lovers',
     theme: 'Connection',
     blurb: 'Go beneath the surface. Answer honestly, listen generously.',
   },
   {
     numeral: 'XVII',
     title: 'The Star',
+    sigil: 'star',
     theme: 'Reflection',
     blurb: 'Look back at tonight and at each other. Say what you noticed.',
   },

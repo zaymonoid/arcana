@@ -3,7 +3,8 @@ import { LitElement, css, html, type CSSResultGroup } from 'lit'
 /**
  * A full-bleed WebGL canvas that runs one fragment shader.
  *
- * Subclasses provide `frag`, which receives `uRes`, `uTime` and `uFade`.
+ * Subclasses provide `frag`, which receives `uRes`, `uTime`, `uFade` and
+ * `uVariant` (from `variant()`, for shaders that draw more than one design).
  * Purely presentational: `active` comes from the store; when it turns off
  * the effect fades out and the render loop stops.
  */
@@ -21,6 +22,10 @@ export abstract class ShaderCanvas extends LitElement {
 
   protected abstract readonly frag: string
 
+  protected variant() {
+    return 0
+  }
+
   static styles: CSSResultGroup = css`
     :host {
       position: absolute;
@@ -37,7 +42,7 @@ export abstract class ShaderCanvas extends LitElement {
   `
 
   private gl: WebGLRenderingContext | null = null
-  private uniforms: Record<'res' | 'time' | 'fade', WebGLUniformLocation | null> | null = null
+  private uniforms: Record<'res' | 'time' | 'fade' | 'variant', WebGLUniformLocation | null> | null = null
   private raf = 0
   private fade = 0
   private start = performance.now()
@@ -107,6 +112,7 @@ export abstract class ShaderCanvas extends LitElement {
       res: gl.getUniformLocation(prog, 'uRes'),
       time: gl.getUniformLocation(prog, 'uTime'),
       fade: gl.getUniformLocation(prog, 'uFade'),
+      variant: gl.getUniformLocation(prog, 'uVariant'),
     }
     gl.clearColor(0, 0, 0, 0)
     return true
@@ -150,6 +156,7 @@ export abstract class ShaderCanvas extends LitElement {
     gl.uniform2f(u.res, gl.canvas.width, gl.canvas.height)
     gl.uniform1f(u.time, (performance.now() - this.start) / 1000)
     gl.uniform1f(u.fade, this.fade)
+    gl.uniform1f(u.variant, this.variant())
     gl.drawArrays(gl.TRIANGLES, 0, 3)
   }
 }

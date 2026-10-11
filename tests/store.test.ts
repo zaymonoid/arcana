@@ -81,6 +81,7 @@ describe('rules', () => {
     expect(S.selectScreen(waiting)).toBe('turn')
     expect(S.selectScreen(drawn)).toBe('turn')
     expect(S.selectTurn(waiting)!.card).toBeNull()
+    expect(S.selectTurn(waiting)!.sigil).toBe('fool')
     expect(S.selectTurn(drawn)!.key).toBe(S.selectTurn(waiting)!.key)
     const { card, used } = R.draw(drawn.game!, [0.9, 0.5, 0], drawn.game!.card!.prompt.id)
     const passed = reduce(drawn, { id: 'card/dealt', data: { card, used, isPass: true } })
