@@ -51,6 +51,13 @@ export const WILD: Arcanum = {
   blurb: 'Everyone plays.',
 }
 
+export const OBLIQUE: Arcanum = {
+  numeral: 'XII',
+  title: 'The Hanged Man',
+  theme: 'Oblique',
+  blurb: 'Come at it sideways.',
+}
+
 export const CLOSING: Arcanum = {
   numeral: 'XIX',
   title: 'The Sun',
@@ -184,5 +191,40 @@ export const WILDCARDS: Prompt[] = [
     'Ask {name} any question you like. They may pass for free.',
     'Hold eye contact with {name} for ten seconds. No talking.',
     'Give {name} a genuine compliment — then they give one back.',
+  ]),
+]
+
+/**
+ * Oblique cards, loosely after Oblique Strategies: a sideways instruction
+ * rather than a question. Rare, and only once the group has warmed up.
+ */
+export const OBLIQUES: Prompt[] = [
+  ...mk('O', 'self', [
+    'Answer a question you have already heard tonight — as the person you were ten years ago.',
+    'Describe your week as weather.',
+    'Take the quality you like least in yourself. Where has it served you well?',
+    'Treat a mistake you made this year as a hidden intention. What were you really trying to do?',
+    'Name the question tonight you were relieved not to be asked. Answer it, or say why not.',
+    'Describe what you want without naming it. Give its outline, its weight, its colour.',
+    'Give yourself the advice you would never give anyone else.',
+    'Pick an ordinary object within reach. Let it explain your current state of mind.',
+    'Describe a feeling you do not have a word for.',
+    'Say something true, at half speed.',
+    'What are you good at that you would rather not be needed for?',
+    'Tell a story you usually tell well — from the embarrassing angle.',
+    'Take a strong opinion you hold. Argue the other side as if you meant it.',
+  ]),
+  ...mk('O', 'ask', [
+    'Tell the group how {name} would describe you. Then {name} corrects the record.',
+    'Say what you think {name} has been leaving unsaid tonight. They may confirm, deny or stay silent.',
+    'Ask {name} the question you would want to be asked if you were them.',
+    'Reverse: {name} asks you a question. You may only answer with a story.',
+    'Reverse: {name} tells you what they think you need to hear right now.',
+  ]),
+  ...mk('O', 'group', [
+    'One minute of silence, timed. Then everyone says one word about what it was like.',
+    'Everyone finishes the sentence: “The thing nobody here has said yet is…”',
+    'Go around: repeat back something someone else said tonight, in your own words, until they say “yes, that’s it”.',
+    'Decide together what this group is circling but has not asked. Then answer it together.',
   ]),
 ]

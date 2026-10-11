@@ -3,17 +3,20 @@
  * time-based arrives as an argument (dice rolls, timestamps) — the
  * processes supply those, the reducer calls these.
  */
-import { DECK, LEVELS, WILDCARDS } from '../deck'
-import type { DrawnCard, Game, Length } from './state'
+import { DECK, LEVELS, OBLIQUES, WILDCARDS } from '../deck'
+import type { DrawnCard, Game, Length, Suit } from './state'
 
 /** Rounds per level — a round is everyone taking one turn. */
 export const ROUNDS: Record<Length, number> = { quick: 1, standard: 2, deep: 3 }
 export const PASSES_PER_PLAYER = 2
 export const WILDCARD_CHANCE = 1 / 8
+export const OBLIQUE_CHANCE = 1 / 12
+/** Oblique cards wait until the group has warmed up (The Lovers onward). */
+export const OBLIQUE_FROM_LEVEL = 1
 export const MAX_PLAYERS = 10
 export const MIN_PLAYERS = 2
 
-/** Three uniform rolls in [0, 1): wildcard?, which prompt, which target. */
+/** Three uniform rolls in [0, 1): which pile, which prompt, which target. */
 export type Rolls = readonly [number, number, number]
 
 export function newGame(names: readonly string[], length: Length, startedAt: number): Game {
@@ -90,8 +93,8 @@ export const finish = (g: Game, endedAt: number): Game =>
 
 /** Choose the next card for the active player. Pure: randomness comes in as rolls. */
 export function draw(g: Game, rolls: Rolls, exclude?: string): { card: DrawnCard; used: string[] } {
-  const wild = rolls[0] < WILDCARD_CHANCE
-  const pool = wild ? WILDCARDS : DECK[g.level]
+  const suit = suitFor(g, rolls[0])
+  const pool = suit === 'wild' ? WILDCARDS : suit === 'oblique' ? OBLIQUES : DECK[g.level]
   const poolIds = new Set(pool.map((p) => p.id))
 
   let used = g.used
@@ -107,8 +110,15 @@ export function draw(g: Game, rolls: Rolls, exclude?: string): { card: DrawnCard
 
   return {
     used: [...used, prompt.id],
-    card: { key: g.draws + 1, prompt, wild, target, redraw: exclude !== undefined },
+    card: { key: g.draws + 1, prompt, suit, target, redraw: exclude !== undefined },
   }
+}
+
+/** Wildcards at any level; obliques only once the group has warmed up. */
+function suitFor(g: Game, roll: number): Suit {
+  if (roll < WILDCARD_CHANCE) return 'wild'
+  if (g.level >= OBLIQUE_FROM_LEVEL && roll < WILDCARD_CHANCE + OBLIQUE_CHANCE) return 'oblique'
+  return 'level'
 }
 
 /**

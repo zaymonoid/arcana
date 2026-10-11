@@ -55,6 +55,21 @@ describe('rules', () => {
     expect(s.game!.phase).toBe('closing')
   })
 
+  it('deals wildcards at any level, obliques only once warmed up', () => {
+    const roll = R.WILDCARD_CHANCE + R.OBLIQUE_CHANCE / 2
+    let s = reduce(started(['A', 'B']), { id: 'level/begin' })
+    expect(R.draw(s.game!, [0, 0, 0]).card.suit).toBe('wild')
+    expect(R.draw(s.game!, [roll, 0, 0]).card.suit).toBe('level')
+    expect(R.draw(s.game!, [0.9, 0, 0]).card.suit).toBe('level')
+    for (let t = 0; t < 2; t++) s = reduce(dealt(s), { id: 'card/done' })
+    s = reduce(s, { id: 'level/begin' })
+    const oblique = R.draw(s.game!, [roll, 0, 0]).card
+    expect(oblique.suit).toBe('oblique')
+    const turn = S.selectTurn(reduce(s, { id: 'card/dealt', data: { card: oblique, used: [], isPass: false } }))
+    expect(turn!.card!.arcanum.title).toBe('The Hanged Man')
+    expect(turn!.heading.map((p) => p.text).join('')).toBe('A draws an oblique card')
+  })
+
   it('ignores done before a card is drawn', () => {
     const s = reduce(started(), { id: 'level/begin' })
     expect(reduce(s, { id: 'card/done' })).toBe(s)
