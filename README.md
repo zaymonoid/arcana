@@ -17,7 +17,7 @@ Built with [Lit](https://lit.dev), [Tailwind CSS v4](https://tailwindcss.com) an
    - That player taps the face-down card to flip it, then reads it aloud.
    - When the card has been answered they tap it again. The phone moves clockwise to the next player.
    - Tapping the card (or anywhere around it) is how the whole game moves on: it also begins each level and finishes the reading. The **↶** button in the top left undoes an accidental tap.
-3. **Passes:** each player has 2 passes for the whole game. A pass deals a replacement card, already turned over.
+3. **Passes:** each player has 3 passes for the whole game. A pass deals a replacement card, already turned over.
 4. **Targets:** nobody answers their own draw. Cards that name another player, and questions about "you", pick who they're for by fair rotation: whoever has been asked about least, and never the person holding the phone. The drawer reads the card to them.
 5. **Wildcards:** about 1 card in 8 is a *Wheel of Fortune* card that everyone plays.
 6. **Oblique cards:** from level 2 onward, about 1 card in 12 is a *Hanged Man* card: a sideways instruction rather than a question, loosely after Oblique Strategies.
