@@ -111,6 +111,16 @@ const perception = mk('I', 'guess', [
   'Do you think {name} keeps a tidy home? What makes you say that?',
   'What do you think {name} was obsessed with as a child?',
   'What do you think {name} would never, ever eat?',
+    'What do you think {name} would do if they found £50 on the floor of an empty room?',
+    "What do you think {name}'s search history looked like at 2am this week?",
+    'What do you think {name} does in the five minutes after walking in the door alone?',
+    "What rule do you think {name} secretly thinks doesn't apply to them?",
+    'If {name} were a haunted house, what would the ghost be mad about?',
+    'What do you think {name} rehearses in the shower?',
+    'What do you think {name} was the last person to find out about?',
+    "What do you think {name}'s villain origin story would be?",
+    "Which household appliance has {name}'s energy?",
+    'What do you think {name} is a terrible judge of?',
 ])
 
 const connection = [
@@ -137,7 +147,15 @@ const connection = [
     "What are you grateful for this year that you haven't said out loud?",
     'What does friendship ask of you that you find difficult?',
     'What do you believe that most people here might not?',
-  ]),
+      "What's a belief you hold mostly because of one person?",
+    "What's something you were wrong about for an embarrassingly long time?",
+    "What's a thing you do only when nobody is watching?",
+    "What do you think you'd be like if you'd been born ten years earlier?",
+    "What's a conversation you keep having in your head that you've never had out loud?",
+    "What's the smallest thing that has ever made you cry?",
+    "What's a compliment you'd be suspicious of?",
+    "What do people get wrong about you in a way you've stopped correcting?",
+]),
   ...mk('II', 'ask', [
     "Ask {name} a question you've wanted to ask but haven't.",
     'What do you think you and {name} have in common that nobody would notice?',
@@ -145,7 +163,9 @@ const connection = [
     'What would you most want to learn from {name}?',
     'What do you think {name} needs to hear right now?',
     'Tell {name} about a moment you felt you understood them better.',
-  ]),
+      "Tell {name} something you've assumed about them without ever checking.",
+    "Ask {name} what they'd want this group to argue about on their behalf.",
+]),
 ]
 
 const reflection = [
@@ -191,7 +211,12 @@ export const WILDCARDS: Prompt[] = [
     'On three, everyone points to who they would trust to plan their surprise party.',
     'Everyone finishes the sentence: “I feel most at peace when…”',
     'Decide together: what should this group do together next?',
-  ]),
+      'On three, everyone points to who would survive longest in a period drama.',
+    'Everyone: say the last lie you told. Small ones count.',
+    "Go around: what's the pettiest hill you'd die on?",
+    "Everyone names the group's collective weakness. Vote on the winner.",
+    'On three, everyone points to who would be the hardest to buy a present for.',
+]),
   ...mk('W', 'ask', [
     'Ask {name} any question you like. They may pass for free.',
     'Hold eye contact with {name} for ten seconds. No talking.',
@@ -218,7 +243,11 @@ export const OBLIQUES: Prompt[] = [
     'What are you good at that you would rather not be needed for?',
     'Tell a story you usually tell well — from the embarrassing angle.',
     'Take a strong opinion you hold. Argue the other side as if you meant it.',
-  ]),
+      'Answer the next question as the person on your right thinks you would.',
+    'Describe your current problem as a recipe.',
+    "Say what you're avoiding, in the form of a weather forecast.",
+    "Name something you've been calling a preference that is actually a fear.",
+]),
   ...mk('O', 'ask', [
     'Tell the group how {name} would describe you. Then {name} corrects the record.',
     'Say what you think {name} has been leaving unsaid tonight. They may confirm, deny or stay silent.',
