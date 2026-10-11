@@ -66,7 +66,7 @@ void main() {
   float d = (0.8 * uv.x + uv.y) - (mod(t * 0.18, 2.6) - 0.4);
   float glint = exp(-d * d * 14.0);
 
-  float a = (0.05 + 0.32 * filaments * (0.5 + glint) + 0.30 * glint) * uFade;
+  float a = (0.025 + 0.16 * filaments * (0.5 + glint) + 0.15 * glint) * uFade;
   gl_FragColor = vec4(film * a, a);
 }
 `
