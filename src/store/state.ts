@@ -49,6 +49,8 @@ export interface SetupState {
 export interface UiState {
   readonly menuOpen: boolean
   readonly confirmingEnd: boolean
+  /** A debug dump of the whole state, shown in the menu for copying. */
+  readonly dump: { readonly text: string; readonly copied: boolean | null } | null
 }
 
 export interface State {
@@ -69,7 +71,7 @@ export const initialState: State = {
   game: null,
   saved: null,
   history: [],
-  ui: { menuOpen: false, confirmingEnd: false },
+  ui: { menuOpen: false, confirmingEnd: false, dump: null },
 }
 
 export type Action =
@@ -104,3 +106,9 @@ export type Action =
   | { id: 'menu/end-request' }
   | { id: 'menu/end-cancel' }
   | { id: 'menu/end-confirm' }
+  // Debug (intents → processes → events)
+  | { id: 'debug/dump' }
+  | { id: 'debug/dumped'; data: { text: string } }
+  | { id: 'debug/copy' }
+  | { id: 'debug/copied'; data: { ok: boolean } }
+  | { id: 'debug/close' }

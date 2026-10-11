@@ -67,6 +67,39 @@ const passCard = takeLeading(['card/pass'], (_, ctx) =>
   }),
 )
 
+// ---------- Debug ----------
+
+const environment = Effect.sync(() =>
+  typeof window === 'undefined'
+    ? null
+    : {
+        userAgent: navigator.userAgent,
+        viewport: `${window.innerWidth}x${window.innerHeight}@${window.devicePixelRatio}`,
+        url: location.href,
+      },
+)
+
+const dump = takeLeading(['debug/dump'], (_, ctx) =>
+  Effect.gen(function* () {
+    const { booted, setup, game, saved, history } = yield* ctx.select()
+    const at = new Date(yield* Clock.currentTimeMillis).toISOString()
+    const text = JSON.stringify({ at, env: yield* environment, booted, setup, game, saved, history }, null, 2)
+    yield* ctx.put({ id: 'debug/dumped', data: { text } })
+  }),
+)
+
+const copyDump = takeLeading(['debug/copy'], (_, ctx) =>
+  Effect.gen(function* () {
+    const text = (yield* ctx.select()).ui.dump?.text
+    if (!text) return
+    const ok = yield* Effect.tryPromise(() => navigator.clipboard.writeText(text)).pipe(
+      Effect.as(true),
+      Effect.orElseSucceed(() => false),
+    )
+    yield* ctx.put({ id: 'debug/copied', data: { ok } })
+  }),
+)
+
 // ---------- Persistence ----------
 
 const load = Effect.sync((): Game | null => {
@@ -109,5 +142,7 @@ export const rootProcess: Process<State, Action> = (ctx) =>
     yield* finish(ctx)
     yield* drawCard(ctx)
     yield* passCard(ctx)
+    yield* dump(ctx)
+    yield* copyDump(ctx)
     yield* persistence(ctx)
   })

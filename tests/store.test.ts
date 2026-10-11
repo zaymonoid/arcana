@@ -197,4 +197,19 @@ describe('store processes', () => {
       expect(get().game!.card!.prompt.id).not.toBe(first.prompt.id)
       expect(get().game!.players[0].passes).toBe(R.PASSES_PER_PLAYER - 1)
     }))
+
+  it('dumps the game for debugging, and clears the dump with the menu', () =>
+    run(async (put, get) => {
+      await tick()
+      put({ id: 'game/started', data: { names: ['Sam', 'Alex'], length: 'quick', startedAt: 0 } })
+      put({ id: 'menu/open' })
+      put({ id: 'debug/dump' })
+      await tick()
+      const dump = JSON.parse(get().ui.dump!.text)
+      expect(dump.game.players.map((p: { name: string }) => p.name)).toEqual(['Sam', 'Alex'])
+      expect(S.selectHud(get())!.dump!.copyLabel).toBe('Copy')
+      put({ id: 'menu/close' })
+      await tick()
+      expect(get().ui.dump).toBeNull()
+    }))
 })

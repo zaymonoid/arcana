@@ -62,6 +62,10 @@ export const selectHud = (s: State) => {
     rounds: R.roundsInLevel(g),
     menuOpen: s.ui.menuOpen,
     confirmingEnd: s.ui.confirmingEnd,
+    dump: s.ui.dump && {
+      text: s.ui.dump.text,
+      copyLabel: s.ui.dump.copied === null ? 'Copy' : s.ui.dump.copied ? 'Copied ✓' : 'Copy failed — select the text',
+    },
     canUndo: s.history.length > 0,
     players: g.players.map((p, i) => ({ name: p.name, passes: p.passes, current: i === g.current })),
     deeperLabel: last ? 'Go to the closing card' : `Go deeper → ${LEVELS[g.level + 1].theme}`,
