@@ -71,19 +71,29 @@ export class ArcanaApp extends LitElement {
 
   private renderSetup() {
     const v = this.setup.value
+    const n = v.seats.length
     return html`
-      <header class="fade-in mt-6 mb-8 text-center">
-        <div class="mx-auto mb-4 h-14 w-14 text-gold">${emblem('The Star')}</div>
-        <h1 class="font-display text-5xl font-semibold tracking-[-0.01em] text-gold">Arcana</h1>
-        <p class="mt-3 font-sans text-lg text-parchment/75">
-          A deck of questions for getting to know each other. One phone, passed around the circle.
+      <header class="fade-in mt-2 flex flex-col items-center text-center">
+        <div class="seat-ring" aria-hidden="true">
+          <div class="seat-orbit"></div>
+          <div class="seat-halo"></div>
+          <div class="absolute inset-0 m-auto h-16 w-16 text-gold">${emblem('The Star')}</div>
+          ${v.seats.map(
+            (seat, i) => html`<div class="seat ${seat.filled ? 'is-filled' : ''}" style="--i:${i};--n:${n}">
+              ${seat.filled ? seat.initial : seat.numeral}
+            </div>`,
+          )}
+        </div>
+        <h1 class="mt-1 font-display text-6xl font-semibold tracking-[-0.02em] text-gold">Arcana</h1>
+        <p class="mt-2 max-w-[19rem] text-base leading-snug text-parchment/70">
+          Questions for getting to know each other. One phone, passed around the circle.
         </p>
       </header>
 
       ${v.saved
         ? html`
-            <section class="fade-in mb-8 rounded-2xl border border-gold/40 bg-ink-2/70 p-5 text-center">
-              <p class="font-sans text-lg">
+            <section class="fade-in mt-8 rounded-2xl border border-gold/40 bg-ink-2/70 p-5 text-center">
+              <p class="text-lg">
                 A reading is in progress — <span class="text-gold">${v.saved.levelTitle}</span>, ${v.saved.players} players.
               </p>
               <div class="mt-4 flex justify-center gap-3">
@@ -94,18 +104,25 @@ export class ArcanaApp extends LitElement {
           `
         : nothing}
 
-      <section class="fade-in">
-        <h2 class="mb-1 font-sans text-xs font-bold tracking-[0.22em] text-gold/80 uppercase">Players</h2>
-        <p class="mb-4 font-sans text-parchment/60">Enter names in seating order, going clockwise.</p>
+      <section class="fade-in mt-8">
+        <div class="mb-3 flex items-baseline justify-between">
+          <h2 class="font-display text-2xl font-semibold text-parchment">The circle</h2>
+          <p class="text-sm text-parchment/50">Clockwise, in seating order</p>
+        </div>
         <ol class="space-y-2">
           ${v.names.map(
             (name, index) => html`
-              <li class="flex items-center gap-2">
-                <span class="w-6 text-right font-display text-lg text-gold/60">${index + 1}</span>
+              <li class="seat-row group flex items-center gap-3 rounded-2xl border border-gold/15 bg-ink-2/60 py-1.5 pr-1.5 pl-3 transition focus-within:border-gold/70 focus-within:bg-ink-2">
+                <span
+                  class="grid h-9 w-9 shrink-0 place-items-center rounded-full font-display text-sm font-semibold transition ${v.seats[index].filled
+                    ? 'bg-gold text-ink'
+                    : 'border border-dashed border-gold/40 text-gold/70'}"
+                  >${v.seats[index].numeral}</span
+                >
                 <input
                   data-name
-                  class="min-w-0 flex-1 rounded-xl border border-gold/25 bg-ink-2/80 px-4 py-3 font-sans text-lg font-medium text-parchment placeholder:text-parchment/30 focus:border-gold focus:outline-none"
-                  placeholder="Name"
+                  class="min-w-0 flex-1 bg-transparent py-2 text-lg font-semibold text-parchment placeholder:font-medium placeholder:text-parchment/30 focus:outline-none"
+                  placeholder=${v.seats[index].first ? 'Who draws first?' : 'Name'}
                   autocomplete="off"
                   autocapitalize="words"
                   enterkeyhint=${index === v.names.length - 1 ? 'done' : 'next'}
@@ -114,8 +131,11 @@ export class ArcanaApp extends LitElement {
                   @input=${(e: InputEvent) => put({ id: 'setup/name', data: { index, value: (e.target as HTMLInputElement).value } })}
                   @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && put({ id: 'setup/enter', data: { index } })}
                 />
+                ${v.seats[index].first && v.seats[index].filled
+                  ? html`<span class="shrink-0 rounded-full bg-gold/15 px-2.5 py-1 text-[0.65rem] font-bold tracking-[0.15em] text-gold uppercase">Starts</span>`
+                  : nothing}
                 <button
-                  class="grid h-11 w-11 place-items-center rounded-full text-2xl text-parchment/40 hover:text-wine disabled:invisible"
+                  class="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-xl text-parchment/35 transition hover:bg-wine/30 hover:text-parchment disabled:hidden"
                   aria-label="Remove player"
                   ?disabled=${!v.canRemove}
                   @click=${() => put({ id: 'setup/remove', data: { index } })}
@@ -127,36 +147,39 @@ export class ArcanaApp extends LitElement {
           )}
         </ol>
         ${v.canAdd
-          ? html`<button class="mt-3 ml-8 font-sans text-xs font-bold tracking-[0.22em] text-gold uppercase" @click=${() => put({ id: 'setup/add' })}>
-              + Add player
+          ? html`<button
+              class="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-gold/30 py-3.5 text-sm font-bold tracking-[0.15em] text-gold/80 uppercase transition hover:border-gold/60 hover:text-gold"
+              @click=${() => put({ id: 'setup/add' })}
+            >
+              <span class="text-lg leading-none">+</span> Add a seat
             </button>`
           : nothing}
-        ${v.duplicate
-          ? html`<p class="mt-3 ml-8 font-sans text-rose-300">Two players are called “${v.duplicate}” — make them unique.</p>`
-          : nothing}
+        ${v.duplicate ? html`<p class="mt-3 text-rose-300">Two players are called “${v.duplicate}” — make them unique.</p>` : nothing}
       </section>
 
-      <section class="fade-in mt-8">
-        <h2 class="mb-3 font-sans text-xs font-bold tracking-[0.22em] text-gold/80 uppercase">Length</h2>
-        <div class="grid grid-cols-3 gap-2">
+      <section class="fade-in mt-9">
+        <h2 class="mb-3 font-display text-2xl font-semibold text-parchment">How deep?</h2>
+        <div class="grid grid-cols-3 gap-3">
           ${v.lengths.map(
             (l) => html`
               <button
-                class="rounded-xl border px-2 py-3 text-center transition ${l.selected
-                  ? 'border-gold bg-gold/15 text-gold'
-                  : 'border-gold/20 text-parchment/70'}"
+                class="length-card ${l.selected ? 'is-selected' : ''}"
+                aria-pressed=${l.selected}
                 @click=${() => put({ id: 'setup/length', data: { length: l.id } })}
               >
-                <div class="font-sans text-sm font-bold">${l.label}</div>
-                <div class="font-sans text-sm opacity-70">${l.hint}</div>
+                <span class="flex gap-1">
+                  ${Array.from({ length: l.rounds }, () => html`<span class="h-2 w-2 rotate-45 bg-current"></span>`)}
+                </span>
+                <span class="mt-auto font-display text-xl font-semibold">${l.label}</span>
+                <span class="text-sm opacity-70">${l.hint}</span>
               </button>
             `,
           )}
         </div>
-        <p class="mt-3 font-sans text-parchment/60">${v.summary}</p>
+        <p class="mt-3 text-sm text-parchment/55">${v.summary}</p>
       </section>
 
-      <div class="mt-auto pt-10">
+      <div class="sticky bottom-0 mt-auto -mx-4 bg-gradient-to-t from-ink via-ink/90 to-transparent px-4 pt-10 pb-1">
         <button class="${btnGold} w-full py-4" ?disabled=${!v.canStart} @click=${() => put({ id: 'game/start' })}>
           Begin the reading
         </button>

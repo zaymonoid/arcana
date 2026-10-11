@@ -97,6 +97,124 @@ body {
   }
 }
 
+/* ---------- Setup: the seating circle ---------- */
+
+.seat-ring {
+  --r: 5.25rem;
+  position: relative;
+  width: 14.5rem;
+  height: 14.5rem;
+}
+
+.seat-orbit {
+  position: absolute;
+  inset: calc(50% - var(--r));
+  border-radius: 9999px;
+  border: 1px dashed rgb(212 177 95 / 0.35);
+  animation: orbit-turn 60s linear infinite;
+}
+
+.seat-halo {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 7rem;
+  height: 7rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgb(212 177 95 / 0.35) 0%, rgb(201 162 255 / 0.12) 45%, transparent 70%);
+  animation: halo-breathe 4s ease-in-out infinite;
+}
+
+/* Seats sit on the orbit, clockwise from the top, and glide when the circle grows or shrinks. */
+.seat {
+  --a: calc(var(--i) / var(--n) * 1turn);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin: -1.3rem 0 0 -1.3rem;
+  border-radius: 9999px;
+  border: 1px dashed rgb(212 177 95 / 0.4);
+  background: var(--color-ink);
+  color: rgb(212 177 95 / 0.6);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transform: rotate(var(--a)) translateY(calc(var(--r) * -1)) rotate(calc(var(--a) * -1));
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.75, 0.25, 1),
+    background 0.3s,
+    color 0.3s,
+    box-shadow 0.3s;
+}
+
+.seat.is-filled {
+  border: 1.5px solid #fff3c4;
+  background: linear-gradient(160deg, #f5dd97, var(--color-gold) 55%, #b48c3c);
+  color: var(--color-ink);
+  font-size: 1.15rem;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    0 0 1.25rem -0.25rem rgb(212 177 95 / 0.7);
+  animation: seat-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes orbit-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes halo-breathe {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes seat-pop {
+  from {
+    scale: 0.6;
+  }
+}
+
+/* Length options as small upright cards. */
+.length-card {
+  display: flex;
+  aspect-ratio: 4 / 5;
+  flex-direction: column;
+  align-items: flex-start;
+  border-radius: 1rem;
+  border: 1px solid rgb(212 177 95 / 0.2);
+  background: rgb(22 29 51 / 0.6);
+  padding: 0.85rem;
+  text-align: left;
+  color: rgb(244 234 211 / 0.7);
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.75, 0.25, 1),
+    border-color 0.3s,
+    box-shadow 0.3s,
+    color 0.3s;
+}
+
+.length-card.is-selected {
+  transform: translateY(-0.3rem);
+  border-color: var(--color-gold);
+  background:
+    radial-gradient(ellipse at 30% 0%, rgb(212 177 95 / 0.28), transparent 70%),
+    var(--color-ink-2);
+  color: var(--color-gold);
+  box-shadow: 0 1rem 2rem -1rem rgb(212 177 95 / 0.6);
+}
+
 /* ---------- Tarot card ---------- */
 
 .tarot {
@@ -205,7 +323,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tarot-inner {
+  .tarot-inner,
+  .seat {
     transition-duration: 0.01s;
   }
   .deal-in,
@@ -213,7 +332,10 @@ body {
   .deal-flip .tarot-inner,
   .fade-in,
   .btn-gold,
-  .btn-gold::after {
+  .btn-gold::after,
+  .seat-orbit,
+  .seat-halo,
+  .seat.is-filled {
     animation: none;
   }
 }

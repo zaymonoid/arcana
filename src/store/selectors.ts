@@ -23,17 +23,26 @@ const LENGTHS: { id: Length; label: string; hint: string }[] = [
   { id: 'deep', label: 'Deep', hint: '~90 min' },
 ]
 
+const SEAT_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+
 export const selectSetup = (s: State) => {
   const { names, length, focus } = s.setup
   const rounds = R.ROUNDS[length]
   return {
     names,
     focus,
+    /** The circle as it's being filled in, clockwise from whoever draws first. */
+    seats: names.map((n, i) => ({
+      numeral: SEAT_NUMERALS[i],
+      initial: n.trim().charAt(0).toUpperCase(),
+      filled: n.trim() !== '',
+      first: i === 0,
+    })),
     canAdd: names.length < R.MAX_PLAYERS,
     canRemove: names.length > R.MIN_PLAYERS,
     duplicate: R.duplicateName(names),
     canStart: R.canStart(names),
-    lengths: LENGTHS.map((l) => ({ ...l, selected: l.id === length })),
+    lengths: LENGTHS.map((l) => ({ ...l, rounds: R.ROUNDS[l.id], selected: l.id === length })),
     summary: `${rounds} ${rounds === 1 ? 'round' : 'rounds'} per level · three levels · ${R.PASSES_PER_PLAYER} passes each`,
     saved: s.saved
       ? { levelTitle: LEVELS[Math.min(s.saved.level, LEVELS.length - 1)].title, players: s.saved.players.length }
