@@ -110,7 +110,7 @@ export const selectTurn = (s: State) => {
   const target = card.target !== null ? g.players[card.target].name : null
   return {
     ...base,
-    heading: [name, { text: DRAWS[card.suit], name: false }] as TextPart[],
+    heading: [{ text: DRAWS[card.suit], name: false }, name] as TextPart[],
     hint: null,
     card: {
       /** Changes with every deal, so the view can tell a fresh card from a re-render. */
@@ -121,7 +121,7 @@ export const selectTurn = (s: State) => {
       canPass: R.canPass(g),
       ariaLabel: `${card.prompt.text.replaceAll('{name}', target ?? 'someone')} Tap when done.`,
       text: fill(card.prompt.text, target),
-      instruction: instruction(card.prompt.kind, player.name, target),
+      instruction: instruction(card.prompt.kind, target),
     },
   }
 }
@@ -139,10 +139,11 @@ export const selectSummary = (s: State) => {
   }
 }
 
+/** The face-up heading speaks to whoever is holding the phone. */
 const DRAWS: Record<Suit, string> = {
-  level: ' draws',
-  wild: ' draws a wildcard',
-  oblique: ' draws an oblique card',
+  level: 'Your card, ',
+  wild: 'Your wildcard, ',
+  oblique: 'Your oblique card, ',
 }
 
 function fill(text: string, target: string | null): TextPart[] {
@@ -154,15 +155,16 @@ function fill(text: string, target: string | null): TextPart[] {
   return parts
 }
 
-function instruction(kind: Kind, player: string, target: string | null): TextPart[] {
+/** Addressed to the drawer, who is holding the phone: "you". */
+function instruction(kind: Kind, target: string | null): TextPart[] {
   const t = { text: target ?? 'someone', name: true }
   switch (kind) {
     case 'guess':
-      return [{ text: `${player} guesses — then `, name: false }, t, { text: ' reveals how close they got.', name: false }]
+      return [{ text: 'You guess — then ', name: false }, t, { text: ' reveals how close you got.', name: false }]
     case 'self':
-      return [{ text: `${player} asks — `, name: false }, t, { text: ' answers.', name: false }]
+      return [{ text: 'Read it to ', name: false }, t, { text: ' — they answer.', name: false }]
     case 'ask':
-      return [{ text: `${player}, this one is for `, name: false }, t, { text: '.', name: false }]
+      return [{ text: 'This one is between you and ', name: false }, t, { text: '.', name: false }]
     case 'group':
       return [{ text: 'Everyone plays.', name: false }]
   }
