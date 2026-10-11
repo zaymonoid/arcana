@@ -88,7 +88,6 @@ const perception = mk('I', 'guess', [
   'Where in the world do you think {name} feels most at home?',
   "What do you think is on {name}'s phone lock screen?",
   'What would {name} be famous for?',
-  "What do you think {name}'s go-to karaoke song is?",
   'What do you think {name} finds hardest to say no to?',
   'What was {name} like as the new kid at school?',
   "What do you think {name}'s love language is?",
