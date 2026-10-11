@@ -291,7 +291,12 @@ export class ArcanaApp extends LitElement {
             @click=${draw}
           >
             <div class="tarot-inner">
-              <div class="tarot-face">${cardBack()}<card-sigil sigil=${v.sigil} ?active=${!c}></card-sigil><iridescent-shimmer ?active=${!c}></iridescent-shimmer></div>
+              <div class="tarot-face">
+                ${cardBack()}
+                <card-sigil sigil=${v.sigil} seed=${v.seed} ?active=${!c}></card-sigil>
+                <iridescent-shimmer seed=${v.seed} ?active=${!c}></iridescent-shimmer>
+                <div class="tarot-frame tarot-frame-back"></div>
+              </div>
               <div class="tarot-face tarot-front">${front}</div>
             </div>
           </button>`,

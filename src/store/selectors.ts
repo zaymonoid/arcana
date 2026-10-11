@@ -90,6 +90,8 @@ export const selectTurn = (s: State) => {
     passes: player.passes,
     /** The level's design for the face-down card back. */
     sigil: LEVELS[g.level].sigil,
+    /** Varies that design's details from card to card. */
+    seed: R.cardSeed(g),
     passesLabel: `${player.passes} ${player.passes === 1 ? 'pass' : 'passes'} left`,
   }
   if (!card) {

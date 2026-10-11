@@ -1,4 +1,3 @@
-import { css } from 'lit'
 import type { Sigil } from '../deck'
 import { ShaderCanvas } from './shader-canvas'
 
@@ -13,7 +12,10 @@ import { ShaderCanvas } from './shader-canvas'
  *
  *   fool   — Perception: a wandering, blinking eye inside the vine sigil
  *   lovers — Connection: two interlocking rings joined by a twisting helix
- *   star   — Reflection: an eight-pointed star, rays and a twinkling ring
+ *   star   — Reflection: a many-pointed star, rays and a twinkling ring
+ *
+ * The card's seed (`uSeed`) varies each design's details — spoke counts,
+ * tilts, reaches, spin — so no two cards of a level are drawn quite alike.
  */
 
 const FRAG = `
@@ -21,6 +23,7 @@ precision highp float;
 uniform vec2 uRes;
 uniform float uTime;
 uniform float uFade;
+uniform float uSeed;
 uniform float uVariant;
 
 const float PI = 3.14159265;
@@ -139,35 +142,45 @@ float arcs(vec2 uv, float t, float n, float r, float rate, float open) {
 }
 
 // ---- The Fool: Perception ----
-float fool(vec2 uv, float t, float br) {
+// v: six to eight vines, the eye's tilt and size, how far the vines reach.
+float fool(vec2 uv, float t, float br, vec4 v) {
+  float n = 6.0 + floor(v.x * 3.0);
+  float size = mix(0.9, 1.1, v.z);
+  float reach = mix(0.31, 0.37, v.w);
   float r = length(uv), ang = atan(uv.y, uv.x);
+  vec2 ev = rot((v.y - 0.5) * 0.5) * uv;
 
   // An eye that glances around and blinks now and then.
   float blink = 1.0 - 0.9 * pow(max(0.0, sin(t * 0.45)), 80.0);
-  vec2 ep = vec2(uv.x, uv.y / blink);
-  float eye = sdLens(ep, 0.14 * br, 0.105 * br) * blink;
+  vec2 ep = vec2(ev.x, ev.y / blink);
+  float eye = sdLens(ep, 0.14 * br * size, 0.105 * br * size) * blink;
   float d = abs(eye) - 0.004 * LINE;
   vec2 look = vec2(0.024 * sin(t * 0.37) * sin(t * 0.11), 0.008 * sin(t * 0.23));
-  float iris = min(abs(length(uv - look) - 0.024) - 0.003 * LINE, length(uv - look) - 0.011);
+  float iris = min(abs(length(ev - look) - 0.024 * size) - 0.003 * LINE, length(ev - look) - 0.011 * size);
   d = min(d, max(iris, eye));
 
   // Lashes fanning above and below the eye.
-  vec2 lp = fold(uv, 14.0);
-  d = min(d, sdTaper(lp, vec2(0.11, 0.0), vec2(0.15, 0.0), 0.0025 * LINE, 0.0));
+  vec2 lp = fold(ev, 12.0 + 2.0 * floor(v.w * 3.0));
+  d = min(d, sdTaper(lp, vec2(0.11, 0.0) * size, vec2(0.15, 0.0) * size, 0.0025 * LINE, 0.0));
 
-  vec2 fp = fold(warped(uv, t), 7.0);
-  d = smin(d, vine(fp, t, 0.165, 0.34), K);
-  d = smin(d, branches(fp, t, 0.165, 0.34), K);
-  d = min(d, rings(r, ang, t, br, 0.2));
-  d = smin(d, arcs(uv, t, 7.0, 0.17 * br, 0.07, 0.7), K * 0.6);
-  d = smin(d, arcs(uv, -t, 7.0, 0.30 * br, 0.05, 0.55), K * 0.6);
+  vec2 fp = fold(warped(uv, t), n);
+  d = smin(d, vine(fp, t, 0.165, reach), K);
+  d = smin(d, branches(fp, t, 0.165, reach), K);
+  d = min(d, rings(r, ang, t, br, mix(0.19, 0.215, v.z)));
+  d = smin(d, arcs(uv, t, n, 0.17 * br, 0.07, mix(0.6, 0.8, v.y)), K * 0.6);
+  d = smin(d, arcs(uv, -t, n, 0.30 * br, 0.05, mix(0.45, 0.65, v.x)), K * 0.6);
   return d;
 }
 
 // ---- The Lovers: Connection ----
-float lovers(vec2 uv, float t, float br) {
+// v: the pair's lean, their distance apart, five or seven spokes, the helix's twist.
+float lovers(vec2 uv, float t, float br, vec4 v) {
+  uv = rot((v.x - 0.5) * 0.9) * uv;
+  float gap = 0.085 * mix(0.88, 1.08, v.y) * br;
+  float n = 5.0 + 2.0 * floor(v.z * 2.0);
+  float twist = mix(30.0, 46.0, v.w);
   float sway = 0.012 * sin(t * 0.3);
-  vec2 c1 = vec2(sway, 0.085 * br), c2 = vec2(-sway, -0.085 * br);
+  vec2 c1 = vec2(sway, gap), c2 = vec2(-sway, -gap);
 
   // Two interlocking rings, each with a core and a flower of short vines.
   vec2 p1 = uv - c1, p2 = uv - c2;
@@ -175,42 +188,47 @@ float lovers(vec2 uv, float t, float br) {
   d = min(d, rings(length(p2), atan(p2.y, p2.x), t + 3.0, br, 0.12));
   d = min(d, length(p1) - 0.016);
   d = min(d, length(p2) - 0.016);
-  // Five spokes each, one pointing away from the partner, so the helix stays clear.
+  // An odd number of spokes each, one pointing away from the partner, so the helix stays clear.
   float rock = 0.12 * sin(t * 0.25);
-  d = smin(d, vine(fold(rot(PI * 0.5 + rock) * p1, 5.0), t, 0.024, 0.075), K);
-  d = smin(d, vine(fold(rot(-PI * 0.5 + rock) * p2, 5.0), t + 2.0, 0.024, 0.075), K);
+  d = smin(d, vine(fold(rot(PI * 0.5 + rock) * p1, n), t, 0.024, 0.075), K);
+  d = smin(d, vine(fold(rot(-PI * 0.5 + rock) * p2, n), t + 2.0, 0.024, 0.075), K);
 
   // A double helix twisting between the two cores.
   float y = uv.y - mix(c2.y, c1.y, 0.5);
   float span = 0.5 * (c1.y - c2.y);
   float amp = 0.035 * cos(clamp(y / span, -1.0, 1.0) * PI * 0.5);
   float x = uv.x - mix(c2.x, c1.x, clamp(y / span * 0.5 + 0.5, 0.0, 1.0));
-  float ph = y * 38.0 - t * 1.2;
-  float slope = sqrt(1.0 + pow(amp * 38.0, 2.0));
+  float ph = y * twist - t * 1.2;
+  float slope = sqrt(1.0 + pow(amp * twist, 2.0));
   float helix = min(abs(x - amp * sin(ph)), abs(x + amp * sin(ph))) / slope - 0.004 * LINE;
   d = min(d, max(helix, abs(y) - span));
 
-  d = smin(d, arcs(uv, t, 7.0, 0.27 * br, 0.05, 0.55), K * 0.6);
+  d = smin(d, arcs(uv, t, 6.0 + floor(v.y * 3.0), mix(0.26, 0.285, v.z) * br, 0.05, 0.55), K * 0.6);
   return d;
 }
 
 // ---- The Star: Reflection ----
-float star(vec2 uv, float t, float br) {
+// v: six to eight points, which way and how fast it turns, the rays' reach, the dots' count.
+float star(vec2 uv, float t, float br, vec4 v) {
+  float n = 6.0 + floor(v.x * 3.0);
+  float spin = (v.y < 0.5 ? -1.0 : 1.0) * mix(0.03, 0.06, v.z);
+  float reach = mix(0.30, 0.37, v.w);
   float r = length(uv), ang = atan(uv.y, uv.x);
-  vec2 p = rot(t * 0.04) * uv;
+  vec2 p = rot(t * spin) * uv;
 
-  // An eight-pointed star with a solid heart.
-  float d = abs(sdStar(p, 0.075 * br, 8.0, 3.0)) - 0.003 * LINE;
-  d = min(d, sdStar(p, 0.028 * br, 8.0, 3.0));
+  // A many-pointed star with a solid heart. Its points start from +y, so the
+  // rays are folded from a quarter turn round to line up with them.
+  float d = abs(sdStar(p, 0.075 * br, n, 3.0)) - 0.003 * LINE;
+  d = min(d, sdStar(p, 0.028 * br, n, 3.0));
 
   // Long rays from the points, short ones between, tapering to nothing.
-  vec2 fp = fold(warped(p, t), 8.0);
-  d = smin(d, sdTaper(fp, vec2(0.085, 0.0), vec2(0.34, 0.0), 0.004 * LINE, 0.0), K);
-  vec2 hp = fold(rot(PI / 8.0) * p, 8.0);
+  vec2 fp = fold(warped(rot(PI * 0.5) * p, t), n);
+  d = smin(d, sdTaper(fp, vec2(0.085, 0.0), vec2(reach, 0.0), 0.004 * LINE, 0.0), K);
+  vec2 hp = fold(rot(PI * 0.5 + PI / n) * p, n);
   d = smin(d, sdTaper(hp, vec2(0.06, 0.0), vec2(0.15, 0.0), 0.003 * LINE, 0.0), K);
 
   // A ring of twinkling dots, and a fine ring outside it.
-  float n = 36.0, sector = 2.0 * PI / n;
+  float dots = n * (4.0 + floor(v.z * 2.0)), sector = 2.0 * PI / dots;
   float idx = floor((ang + PI + 0.5 * sector) / sector);
   vec2 dp = rot(idx * sector - PI) * uv;
   float tw = 0.5 + 0.5 * sin(t * 1.6 + hash(vec2(idx, 3.0)) * 6.283);
@@ -218,12 +236,12 @@ float star(vec2 uv, float t, float br) {
   d = min(d, abs(r - (0.215 * br + 0.003 * sin(ang * 6.0 - t * 0.35))) - 0.002 * LINE);
 
   // Drifting arcs between the rays.
-  d = smin(d, arcs(uv, t, 8.0, 0.125 * br, 0.06, 0.6), K * 0.6);
+  d = smin(d, arcs(uv, t, n, 0.125 * br, 0.06, 0.6), K * 0.6);
 
-  // Four-pointed sparkles scattered above and below.
+  // Four-pointed sparkles scattered above and below, in this card's own places.
   for (int i = 0; i < 8; i++) {
-    float fi = float(i);
-    vec2 pos = vec2(hash(vec2(fi, 1.0)) * 0.3 - 0.15, (0.23 + 0.07 * hash(vec2(fi, 2.0))) * (mod(fi, 2.0) * 2.0 - 1.0));
+    float fi = float(i) + 9.0 * uSeed;
+    vec2 pos = vec2(hash(vec2(fi, 1.0)) * 0.3 - 0.15, (0.23 + 0.07 * hash(vec2(fi, 2.0))) * (mod(float(i), 2.0) * 2.0 - 1.0));
     float size = 0.004 + 0.012 * pow(0.5 + 0.5 * sin(t * 0.9 + fi * 2.3), 3.0);
     d = min(d, sdStar(uv - pos, size, 4.0, 2.3));
   }
@@ -234,21 +252,29 @@ void main() {
   // Centred coordinates scaled to the frame's width: SIZE > 1 lets the sigil
   // run off the edges so it fills the frame rather than fits it.
   vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / (uRes.x * SIZE);
-  float t = uTime * 1.4;
+  // Four independent draws from the card's seed for each design to spend,
+  // a time offset so each card is caught mid-motion at its own moment, and
+  // a coin toss that mirrors the whole thing.
+  vec4 v = vec4(hash(vec2(uSeed * 37.0 + 11.0, 1.0)), hash(vec2(uSeed * 37.0 + 11.0, 2.0)),
+                hash(vec2(uSeed * 37.0 + 11.0, 3.0)), hash(vec2(uSeed * 37.0 + 11.0, 4.0)));
+  float t = uTime * 1.4 + uSeed * 90.0;
   float br = 1.0 + 0.04 * sin(t * 0.5);
+  if (hash(vec2(uSeed * 37.0 + 11.0, 5.0)) < 0.5) uv.x = -uv.x;
 
   float d;
   vec3 tint;
   if (uVariant < 0.5) {
-    d = fool(uv, t, br);
+    d = fool(uv, t, br, v);
     tint = vec3(0.83, 0.69, 0.37); // gold
   } else if (uVariant < 1.5) {
-    d = lovers(uv, t, br);
+    d = lovers(uv, t, br, v);
     tint = vec3(0.88, 0.58, 0.52); // rose gold
   } else {
-    d = star(uv, t, br);
+    d = star(uv, t, br, v);
     tint = vec3(0.68, 0.76, 0.92); // starlight
   }
+  // A whisper of warmth or coolness, so the metal reads slightly differently each card.
+  tint *= 1.0 + 0.06 * (v.wzy - 0.5);
 
   // Crisp core plus layered glow.
   float edge = smoothstep(0.0015, 0.0, d);
@@ -282,16 +308,6 @@ export class CardSigil extends ShaderCanvas {
     return Math.max(0, VARIANTS.indexOf(this.sigil))
   }
 
-  // Clip to the inner gold rule of the card back (x/y 5.5, rx 2 in its 70×120 viewBox).
-  static styles = [
-    ShaderCanvas.styles,
-    css`
-      :host {
-        inset: calc(5.5 / 120 * 100%) calc(5.5 / 70 * 100%);
-        border-radius: calc(2 / 70 * 100%) / calc(2 / 120 * 100%);
-      }
-    `,
-  ]
 }
 
 customElements.define('card-sigil', CardSigil)
