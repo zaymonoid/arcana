@@ -290,10 +290,10 @@ body {
 .tarot-frame {
   position: absolute;
   inset: 0;
-  border: 0.45em solid var(--color-gold-dim);
+  border: 0.225em solid var(--color-gold-dim);
   border-radius: inherit;
   outline: 0.06em solid var(--color-gold-dim);
-  outline-offset: -0.85em;
+  outline-offset: -0.625em;
   pointer-events: none;
 }
 
