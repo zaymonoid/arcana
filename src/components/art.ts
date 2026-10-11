@@ -24,7 +24,7 @@ const rays = (cx: number, cy: number, r1: number, r2: number, n: number, offset 
 
 /** The face-down side: midnight navy and a gold frame. The sigil in the middle is `<card-sigil>`. */
 export const cardBack = () => html`
-  <svg viewBox="0 0 70 120" class="block h-full w-full" aria-hidden="true">
+  <svg viewBox="0 0 70 120" preserveAspectRatio="xMidYMid slice" class="block h-full w-full" aria-hidden="true">
     <defs>
       <radialGradient id="back-bg" cx="50%" cy="50%" r="75%">
         <stop offset="0%" stop-color="#1e2747" />

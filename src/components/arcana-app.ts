@@ -274,7 +274,7 @@ export class ArcanaApp extends LitElement {
         () => put({ id: 'level/begin' }),
         html`
           <p class="fade-in font-sans text-parchment/70">${v.lead}</p>
-          ${keyed(`level-${v.key}`, staticCard(v.arcanum, html`<p class="font-display text-[1.15em] leading-snug italic">${v.arcanum.blurb}</p>`))}
+          ${cardSlot(keyed(`level-${v.key}`, staticCard(v.arcanum, html`<p class="font-display text-[1.15em] leading-snug italic">${v.arcanum.blurb}</p>`)))}
         `,
       )}
       ${hint(v.hint)}
@@ -301,7 +301,11 @@ export class ArcanaApp extends LitElement {
     this.noteCardChange()
     const c = v.card
     const front = c
-      ? cardFront(c.arcanum, html`<p class="font-display text-[1.35em] leading-snug font-medium">${parts(c.text, 'text-wine')}</p>`)
+      ? cardFront(
+          c.arcanum,
+          html`<p class="font-display text-[1.35em] leading-snug font-medium">${parts(c.text, 'text-wine')}</p>`,
+          html`<p class="font-sans text-[0.78em] leading-snug text-sepia/75">${parts(c.instruction, 'font-bold text-wine')}</p>`,
+        )
       : nothing
     const advance = () => {
       if (!c) put({ id: 'card/draw' })
@@ -309,11 +313,11 @@ export class ArcanaApp extends LitElement {
     }
     return html`
       ${this.renderTopBar()}
-      <p class="text-center font-display text-[1.65rem] leading-tight font-medium text-parchment">${parts(v.heading, 'text-gold')}</p>
+      <p class="truncate text-center font-display text-[min(1.65rem,7vw)] leading-tight font-medium text-parchment">${parts(v.heading, 'text-gold')}</p>
       ${tapArea(
         c ? c.ariaLabel : 'Draw a card',
         advance,
-        keyed(
+        cardSlot(keyed(
           v.key,
           html`<div class="tarot ${c ? 'is-flipped' : ''} ${c?.redraw ? 'deal-flip' : 'deal-in'}">
             <div class="tarot-inner">
@@ -326,12 +330,12 @@ export class ArcanaApp extends LitElement {
               <div class="tarot-face tarot-front">${front}</div>
             </div>
           </div>`,
-        ),
+        )),
       )}
-      <div class="flex min-h-[7rem] flex-col items-center gap-3">
+      <div class="flex h-9 shrink-0 items-center justify-center gap-4">
+        ${v.hint ? hint(v.hint) : nothing}
         ${c
           ? html`
-              <p class="fade-in text-center text-base leading-snug text-parchment/80">${parts(c.instruction, 'text-gold')}</p>
               <button
                 class="fade-in inline-flex items-center gap-2 rounded-full border border-gold/35 px-4 py-2 font-sans text-xs font-extrabold tracking-[0.14em] text-gold uppercase transition active:scale-[0.97] disabled:opacity-35"
                 ?disabled=${!c.canPass}
@@ -341,7 +345,6 @@ export class ArcanaApp extends LitElement {
               </button>
             `
           : nothing}
-        ${hint(v.hint)}
       </div>
     `
   }
@@ -354,7 +357,7 @@ export class ArcanaApp extends LitElement {
         () => put({ id: 'game/finish' }),
         html`
           <p class="fade-in font-sans text-parchment/70">The final card</p>
-          ${staticCard(arcanum, html`<p class="font-display text-[1.15em] leading-snug italic">${arcanum.blurb}</p>`)}
+          ${cardSlot(staticCard(arcanum, html`<p class="font-display text-[1.15em] leading-snug italic">${arcanum.blurb}</p>`))}
         `,
       )}
       ${hint('Tap the card to finish')}
@@ -371,11 +374,11 @@ export class ArcanaApp extends LitElement {
       </div>
     `
     return html`
-      <div class="flex flex-1 flex-col items-center justify-center gap-6">
+      <div class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 py-3">
         <p class="fade-in font-sans text-parchment/70">Thank you for playing</p>
-        ${staticCard(v.arcanum, body)}
+        ${cardSlot(staticCard(v.arcanum, body))}
       </div>
-      <div class="mt-6 grid gap-3">
+      <div class="mt-3 grid gap-3">
         <button class="${btnGold} py-4" @click=${() => put({ id: 'game/rematch' })}>Play again</button>
         <button class=${btnGhost} @click=${() => put({ id: 'game/new-players' })}>New players</button>
       </div>
@@ -390,10 +393,13 @@ const FLIP_MS = 1100
 
 /** The middle of the screen is one big tap target that moves the game on. */
 const tapArea = (label: string, onTap: () => void, body: unknown) => html`
-  <button class="tap-area flex w-full flex-1 flex-col items-center justify-center gap-5 py-3" aria-label=${label} @click=${onTap}>
+  <button class="tap-area flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-3 py-3" aria-label=${label} @click=${onTap}>
     ${body}
   </button>
 `
+
+/** Takes whatever room the screen has left; the card inside sizes itself to fill it. */
+const cardSlot = (card: unknown) => html`<div class="card-slot">${card}</div>`
 
 const hint = (text: string) => html`<p class="fade-in text-center font-sans text-xs tracking-[0.12em] text-parchment/40 uppercase">${text}</p>`
 
@@ -414,12 +420,14 @@ const staticCard = (arcanum: Arcanum, body: TemplateResult) => html`
   </div>
 `
 
-const cardFront = (arcanum: Arcanum, body: TemplateResult) => html`
+/** A card's face. `note`, if given, is a small line of play instructions above the title. */
+const cardFront = (arcanum: Arcanum, body: TemplateResult, note?: TemplateResult) => html`
   <div class="tarot-frame"></div>
   <div class="relative flex h-full flex-col items-center px-[1.6em] pt-[1.5em] pb-[1.3em] text-center">
     <div class="font-sans text-[0.8em] font-bold tracking-[0.3em] text-gold-dim">${arcanum.numeral}</div>
     <div class="mt-[0.5em] h-[3.2em] w-[3.2em] text-gold-dim">${emblem(arcanum.title)}</div>
     <div class="flex flex-1 items-center justify-center py-[0.8em]">${body}</div>
+    ${note ? html`<div class="mb-[0.9em] px-[0.4em]">${note}</div>` : nothing}
     <div class="w-full border-t border-gold-dim/50 pt-[0.6em]">
       <div class="font-display text-[1.25em] font-semibold tracking-[0.02em]">${arcanum.title}</div>
       <div class="font-display text-[0.95em] italic opacity-70">${arcanum.theme}</div>
