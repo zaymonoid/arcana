@@ -218,20 +218,26 @@ body {
 /* ---------- Tarot card ---------- */
 
 /*
- * Sized to leave room for everything around it on the turn screen (top bar,
- * heading, instruction and pass button), so the whole turn fits one phone
- * screen without scrolling.
+ * The card fills its slot: the space the screen has left once the top bar,
+ * heading and footer row are placed. It is as wide as it can be, from a
+ * tarot card's 7:12 up to a playing card's 5:7 when the screen is short,
+ * so on a phone it runs almost edge to edge without scrolling.
  */
-.tarot {
-  --w: min(78vw, calc((100dvh - 17rem - env(safe-area-inset-top, 0px)) * 7 / 12), 21rem);
-  width: var(--w);
-  aspect-ratio: 7 / 12;
-  perspective: 1400px;
-  font-size: calc(var(--w) / 18);
+.card-slot {
+  container-type: size;
+  display: grid;
+  place-items: center;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
 }
 
-.tarot-sm {
-  --w: min(38vw, calc(30dvh * 7 / 12), 9.5rem);
+.tarot {
+  --w: min(100cqw, 100cqh * 5 / 7, 26rem);
+  width: var(--w);
+  height: min(100cqh, var(--w) * 12 / 7);
+  perspective: 1400px;
+  font-size: calc(var(--w) / 18);
 }
 
 .tarot-inner {
