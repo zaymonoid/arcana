@@ -111,7 +111,7 @@ export const selectTurn = (s: State) => {
   return {
     ...base,
     heading: [name, { text: DRAWS[card.suit], name: false }] as TextPart[],
-    hint: 'Tap the card when done',
+    hint: null,
     card: {
       /** Changes with every deal, so the view can tell a fresh card from a re-render. */
       key: card.key,

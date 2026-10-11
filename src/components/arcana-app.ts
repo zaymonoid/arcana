@@ -333,7 +333,7 @@ export class ArcanaApp extends LitElement {
         )),
       )}
       <div class="flex h-9 shrink-0 items-center justify-center gap-4">
-        ${hint(v.hint)}
+        ${v.hint ? hint(v.hint) : nothing}
         ${c
           ? html`
               <button
