@@ -144,6 +144,21 @@ describe('rules', () => {
     expect(S.selectTurn(passed)!.key).not.toBe(S.selectTurn(drawn)!.key)
   })
 
+  it('seeds the card art once per turn, steady across the draw, fresh on a pass', () => {
+    const waiting = reduce(started(), { id: 'level/begin' })
+    const drawn = dealt(waiting)
+    const seed = S.selectTurn(waiting)!.seed
+    expect(seed).toBeGreaterThanOrEqual(0)
+    expect(seed).toBeLessThan(1)
+    expect(S.selectTurn(drawn)!.seed).toBe(seed)
+    const { card, used } = R.draw(drawn.game!, [0.9, 0.5, 0], drawn.game!.card!.prompt.id)
+    const passed = reduce(drawn, { id: 'card/dealt', data: { card, used, isPass: true } })
+    expect(S.selectTurn(passed)!.seed).not.toBe(seed)
+    const nextTurn = reduce(drawn, { id: 'card/done' })
+    expect(S.selectTurn(nextTurn)!.seed).not.toBe(seed)
+    expect(R.cardSeed({ ...nextTurn.game!, startedAt: 1 })).not.toBe(S.selectTurn(nextTurn)!.seed)
+  })
+
   it('validates names', () => {
     expect(R.canStart(['A', ' '])).toBe(false)
     expect(R.duplicateName(['Sam', 'sam '])).toBe('sam')
