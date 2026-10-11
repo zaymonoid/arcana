@@ -67,7 +67,7 @@ describe('rules', () => {
     expect(oblique.suit).toBe('oblique')
     const turn = S.selectTurn(reduce(s, { id: 'card/dealt', data: { card: oblique, used: [], isPass: false } }))
     expect(turn!.card!.arcanum.title).toBe('The Hanged Man')
-    expect(turn!.heading.map((p) => p.text).join('')).toBe('A draws an oblique card')
+    expect(turn!.heading.map((p) => p.text).join('')).toBe('Your oblique card, A')
   })
 
   it('never has the drawer answer their own card', () => {
@@ -96,7 +96,7 @@ describe('rules', () => {
     expect(card.target).not.toBe(s.game!.current)
     const turn = S.selectTurn(s)!
     const target = s.game!.players[card.target!].name
-    expect(turn.card!.instruction.map((p) => p.text).join('')).toBe(`A asks — ${target} answers.`)
+    expect(turn.card!.instruction.map((p) => p.text).join('')).toBe(`Read it to ${target} — they answer.`)
     s = reduce(s, { id: 'card/done' })
     expect(s.game!.players[card.target!].askedAbout).toBe(2)
   })

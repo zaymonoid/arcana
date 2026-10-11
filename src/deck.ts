@@ -4,7 +4,7 @@
  *
  * Kinds decide who speaks. Nobody answers their own draw:
  *   guess — the active player guesses about the target, who then reveals the truth
- *   self  — a question about "you": the active player reads it to the target, who answers
+ *   self  — a question about "you": the drawer reads it to the target, who answers
  *   ask   — the active player speaks to (or asks) the target
  *   group — everyone takes part
  */
