@@ -293,7 +293,7 @@ body {
  */
 .tarot-frame {
   --radius: 0.9em;
-  --inset: calc(0.625em + 2px);
+  --inset: calc(0.625em - 2px);
   position: absolute;
   inset: 0;
   border: 0.225em solid var(--color-gold-dim);
