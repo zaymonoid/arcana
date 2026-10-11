@@ -10,6 +10,7 @@ import type { Arcanum } from '../deck'
 import { store } from '../store'
 import * as S from '../store/selectors'
 import { cardBack, emblem } from './art'
+import './card-sigil'
 import './iridescent-shimmer'
 
 const btn =
@@ -290,7 +291,7 @@ export class ArcanaApp extends LitElement {
             @click=${draw}
           >
             <div class="tarot-inner">
-              <div class="tarot-face">${cardBack()}<iridescent-shimmer ?active=${!c}></iridescent-shimmer></div>
+              <div class="tarot-face">${cardBack()}<card-sigil sigil=${v.sigil} ?active=${!c}></card-sigil><iridescent-shimmer ?active=${!c}></iridescent-shimmer></div>
               <div class="tarot-face tarot-front">${front}</div>
             </div>
           </button>`,

@@ -88,6 +88,8 @@ export const selectTurn = (s: State) => {
     key: card?.redraw ? `redraw-${card.key}` : `turn-${g.level}-${g.turnsInLevel}`,
     player: player.name,
     passes: player.passes,
+    /** The level's design for the face-down card back. */
+    sigil: LEVELS[g.level].sigil,
     passesLabel: `${player.passes} ${player.passes === 1 ? 'pass' : 'passes'} left`,
   }
   if (!card) {

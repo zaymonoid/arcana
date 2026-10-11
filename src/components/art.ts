@@ -22,14 +22,7 @@ const rays = (cx: number, cy: number, r1: number, r2: number, n: number, offset 
     return svg`<line x1=${x1} y1=${y1} x2=${x2} y2=${y2} />`
   })
 
-// Deterministic scattering of tiny stars for the card back.
-const BACK_STARS: [number, number, number][] = [
-  [14, 18, 1.2], [56, 16, 1], [22, 31, 0.7], [49, 29, 0.8], [11, 47, 0.9], [60, 44, 1.1],
-  [9, 76, 1], [61, 79, 0.8], [17, 92, 0.7], [53, 95, 1.2], [26, 104, 0.9], [45, 106, 0.7],
-  [35, 14, 0.8], [35, 106, 0.8],
-]
-
-/** The face-down side: midnight navy, gold frame, sun and moon. */
+/** The face-down side: midnight navy and a gold frame. The sigil in the middle is `<card-sigil>`. */
 export const cardBack = () => html`
   <svg viewBox="0 0 70 120" class="block h-full w-full" aria-hidden="true">
     <defs>
@@ -46,16 +39,6 @@ export const cardBack = () => html`
     <g fill="none" stroke=${GOLD} stroke-width="0.6">
       <rect x="3.5" y="3.5" width="63" height="113" rx="3" />
       <rect x="5.5" y="5.5" width="59" height="109" rx="2" stroke-width="0.3" />
-      <circle cx="35" cy="60" r="19" stroke-width="0.4" />
-      <circle cx="35" cy="60" r="21.5" stroke-width="0.25" stroke-dasharray="0.6 1.2" />
-      <g stroke-width="0.35">${rays(35, 60, 12.5, 17.5, 24)}</g>
-      <circle cx="35" cy="60" r="10" />
-      <path d="M38.5 53.8 A7 7 0 1 0 38.5 66.2 A5.6 5.6 0 1 1 38.5 53.8 Z" fill=${GOLD} fill-opacity="0.9" stroke="none" />
-      <polygon points=${starPoints(35, 26, 4, 1.4, 4)} fill=${GOLD} stroke="none" />
-      <polygon points=${starPoints(35, 94, 4, 1.4, 4)} fill=${GOLD} stroke="none" />
-    </g>
-    <g fill=${GOLD}>
-      ${BACK_STARS.map(([x, y, r]) => svg`<circle cx=${x} cy=${y} r=${r * 0.45} opacity="0.75" />`)}
     </g>
   </svg>
 `
