@@ -79,13 +79,6 @@ export function emblem(title: string) {
         return svg`
           <polygon points=${starPoints(24, 24, 16, 6, 8)} />
           <circle cx="24" cy="24" r="2.5" fill="currentColor" />`
-      case 'The Hanged Man':
-        // A figure hung by one foot from a beam, haloed — the world seen upside down.
-        return svg`
-          <path d="M10 9 H38" />
-          <path d="M24 9 V19" />
-          <polygon points="24,19 17,33 31,33" />
-          <circle cx="24" cy="38" r="4" fill="currentColor" stroke="none" />`
       case 'Wheel of Fortune':
         return svg`
           <circle cx="24" cy="24" r="15" />
