@@ -1,0 +1,29 @@
+{
+  "name": "questions",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A tarot-styled get-to-know-each-other question game for one phone and a group of people.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zaymonoid/questions.git"
+  },
+  "dependencies": {
+    "@zaymonoid/katha": "^0.3.0",
+    "effect": "^4.0.2",
+    "lit": "^3.3.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.4",
+    "vitest": "^3.2.7"
+  }
+}
