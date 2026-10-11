@@ -1,3 +1,4 @@
+import { css } from 'lit'
 import { ShaderCanvas } from './shader-canvas'
 
 /**
@@ -18,7 +19,7 @@ uniform float uFade;
 
 const float PI = 3.14159265;
 const float FOLDS = 7.0;
-const float SIZE = 1.25;
+const float SIZE = 1.6;
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -107,8 +108,8 @@ float sigil(vec2 uv, float t) {
 }
 
 void main() {
-  // Centred coordinates scaled to the card's width: SIZE > 1 lets the outer
-  // rings run off the edges so the sigil fills the card rather than fits it.
+  // Centred coordinates scaled to the frame's width: SIZE > 1 lets the outer
+  // rings run off the edges so the sigil fills the frame rather than fits it.
   vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / (uRes.x * SIZE);
   float t = uTime * 1.4;
   float d = sigil(uv, t);
@@ -131,6 +132,17 @@ void main() {
 
 export class CardSigil extends ShaderCanvas {
   protected readonly frag = FRAG
+
+  // Clip to the inner gold rule of the card back (x/y 5.5, rx 2 in its 70×120 viewBox).
+  static styles = [
+    ShaderCanvas.styles,
+    css`
+      :host {
+        inset: calc(5.5 / 120 * 100%) calc(5.5 / 70 * 100%);
+        border-radius: calc(2 / 70 * 100%) / calc(2 / 120 * 100%);
+      }
+    `,
+  ]
 }
 
 customElements.define('card-sigil', CardSigil)
