@@ -8,7 +8,7 @@ import type { DrawnCard, Game, Length, Suit } from './state'
 
 /** Rounds per level — a round is everyone taking one turn. */
 export const ROUNDS: Record<Length, number> = { quick: 1, standard: 2, deep: 3 }
-export const PASSES_PER_PLAYER = 2
+export const PASSES_PER_PLAYER = 3
 export const WILDCARD_CHANCE = 1 / 8
 export const OBLIQUE_CHANCE = 1 / 12
 /** Oblique cards wait until the group has warmed up (The Lovers onward). */
