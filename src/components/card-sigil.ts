@@ -19,7 +19,7 @@ uniform float uFade;
 
 const float PI = 3.14159265;
 const float FOLDS = 7.0;
-const float SIZE = 2.0;
+const float SIZE = 1.25;
 // Stroke weight, scaled down so lines stay fine at a large SIZE.
 const float LINE = 0.5;
 
@@ -110,9 +110,9 @@ float sigil(vec2 uv, float t) {
 }
 
 void main() {
-  // Centred coordinates scaled to the frame's width: SIZE > 1 lets the outer
-  // rings run off the edges so the sigil fills the frame rather than fits it.
-  vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / (uRes.x * SIZE);
+  // Centred coordinates scaled to the frame's height: at SIZE 1.25 the outer
+  // rings (radius ~0.43) reach the top and bottom even when the sigil breathes in.
+  vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / (uRes.y * SIZE);
   float t = uTime * 1.4;
   float d = sigil(uv, t);
 
