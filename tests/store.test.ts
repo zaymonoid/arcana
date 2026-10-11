@@ -159,6 +159,23 @@ describe('rules', () => {
     expect(R.cardSeed({ ...nextTurn.game!, startedAt: 1 })).not.toBe(S.selectTurn(nextTurn)!.seed)
   })
 
+  it('logs every card dealt, in order, with how it left the table', () => {
+    let s = reduce(started(['A', 'B']), { id: 'level/begin' })
+    s = reduce(dealt(s), { id: 'card/done' })
+    s = dealt(s)
+    const { card, used } = R.draw(s.game!, [0.9, 0.5, 0], s.game!.card!.prompt.id)
+    s = reduce(s, { id: 'card/dealt', data: { card, used, isPass: true } })
+    s = reduce(s, { id: 'level/skip' })
+    s = dealt(reduce(s, { id: 'level/begin' }))
+    expect(s.game!.log.map((e) => [e.level, e.drawer, e.outcome])).toEqual([
+      [0, 0, 'answered'],
+      [0, 1, 'passed'],
+      [0, 1, 'skipped'],
+      [1, 1, null],
+    ])
+    expect(s.game!.log[2].card.redraw).toBe(true)
+  })
+
   it('validates names', () => {
     expect(R.canStart(['A', ' '])).toBe(false)
     expect(R.duplicateName(['Sam', 'sam '])).toBe('sam')
@@ -202,11 +219,17 @@ describe('store processes', () => {
     run(async (put, get) => {
       await tick()
       put({ id: 'game/started', data: { names: ['Sam', 'Alex'], length: 'quick', startedAt: 0 } })
+      put({ id: 'level/begin' })
+      put({ id: 'card/draw' })
+      await tick()
       put({ id: 'menu/open' })
       put({ id: 'debug/dump' })
       await tick()
       const dump = JSON.parse(get().ui.dump!.text)
       expect(dump.game.players.map((p: { name: string }) => p.name)).toEqual(['Sam', 'Alex'])
+      expect(dump.game.cards).toHaveLength(1)
+      expect(dump.game.cards[0]).toMatchObject({ n: 1, drawer: 'Sam', outcome: 'on the table' })
+      expect(dump.game.cards[0].text).not.toContain('{name}')
       expect(S.selectHud(get())!.dump!.copyLabel).toBe('Copy')
       put({ id: 'menu/close' })
       await tick()

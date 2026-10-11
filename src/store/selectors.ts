@@ -143,6 +143,40 @@ export const selectSummary = (s: State) => {
   }
 }
 
+/** Everything about the game for a bug report: players, every card in draw order, and the raw state. */
+export const selectDebugDump = (s: State) => {
+  const g = s.game ?? s.saved
+  const name = (i: number | null) => (g && i !== null ? g.players[i]?.name ?? null : null)
+  return {
+    game: g && {
+      phase: g.phase,
+      length: g.length,
+      level: LEVELS[g.level]?.theme ?? 'Closing',
+      round: `${R.currentRound(g)} of ${R.roundsInLevel(g)}`,
+      turn: name(g.current),
+      startedAt: new Date(g.startedAt).toISOString(),
+      endedAt: g.endedAt ? new Date(g.endedAt).toISOString() : null,
+      counts: { draws: g.draws, answered: g.answered, passed: g.passed },
+      players: g.players.map((p, i) => ({ seat: i + 1, name: p.name, passesLeft: p.passes, askedAbout: p.askedAbout })),
+      cards: g.log.map((e, i) => ({
+        n: i + 1,
+        level: LEVELS[e.level]?.theme,
+        drawer: name(e.drawer),
+        target: name(e.card.target),
+        suit: e.card.suit,
+        kind: e.card.prompt.kind,
+        id: e.card.prompt.id,
+        text: e.card.prompt.text.replaceAll('{name}', name(e.card.target) ?? 'someone'),
+        redraw: e.card.redraw,
+        outcome: e.outcome ?? 'on the table',
+      })),
+    },
+    resumable: s.game === null && s.saved !== null,
+    undoDepth: s.history.length,
+    raw: { booted: s.booted, setup: s.setup, game: s.game, saved: s.saved },
+  }
+}
+
 /** The face-up heading speaks to whoever is holding the phone. */
 const DRAWS: Record<Suit, string> = {
   level: 'Your card, ',

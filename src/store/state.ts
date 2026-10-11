@@ -23,6 +23,15 @@ export interface DrawnCard {
   readonly redraw: boolean
 }
 
+/** One card as it was dealt, in draw order, for the debug dump. */
+export interface LogEntry {
+  readonly level: number
+  readonly drawer: number
+  readonly card: DrawnCard
+  /** How it left the table; null while it's still showing. */
+  readonly outcome: 'answered' | 'passed' | 'skipped' | null
+}
+
 export interface Game {
   readonly phase: Phase
   readonly players: readonly Player[]
@@ -35,6 +44,8 @@ export interface Game {
   readonly draws: number
   readonly answered: number
   readonly passed: number
+  /** Every card dealt this game, oldest first. */
+  readonly log: readonly LogEntry[]
   readonly startedAt: number
   readonly endedAt?: number
 }

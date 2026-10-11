@@ -5,6 +5,7 @@
 import { combinators, type Process } from '@zaymonoid/katha'
 import { Clock, Effect, Random, Stream, SubscriptionRef } from 'effect'
 import * as R from './rules'
+import { selectDebugDump } from './selectors'
 import type { Action, Game, State } from './state'
 
 const { takeLeading } = combinators<State, Action>()
@@ -81,9 +82,9 @@ const environment = Effect.sync(() =>
 
 const dump = takeLeading(['debug/dump'], (_, ctx) =>
   Effect.gen(function* () {
-    const { booted, setup, game, saved, history } = yield* ctx.select()
+    const dump = selectDebugDump(yield* ctx.select())
     const at = new Date(yield* Clock.currentTimeMillis).toISOString()
-    const text = JSON.stringify({ at, env: yield* environment, booted, setup, game, saved, history }, null, 2)
+    const text = JSON.stringify({ at, env: yield* environment, ...dump }, null, 2)
     yield* ctx.put({ id: 'debug/dumped', data: { text } })
   }),
 )
@@ -106,7 +107,8 @@ const load = Effect.sync((): Game | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     const game = raw ? (JSON.parse(raw) as Game) : null
-    return game && game.phase !== 'summary' ? game : null
+    // Games saved before the draw log existed start with an empty one.
+    return game && game.phase !== 'summary' ? { ...game, log: game.log ?? [] } : null
   } catch {
     return null
   }
