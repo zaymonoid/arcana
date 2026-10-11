@@ -2,9 +2,9 @@
  * View models. Components read these through `fromStore` and render them
  * as-is — every derivation lives here, not in the view.
  */
-import { CLOSING, FINALE, LEVELS, WILD, type Arcanum, type Kind } from '../deck'
+import { CLOSING, FINALE, LEVELS, OBLIQUE, WILD, type Arcanum, type Kind } from '../deck'
 import * as R from './rules'
-import type { Length, State } from './state'
+import type { Length, State, Suit } from './state'
 
 export type Screen = 'boot' | 'setup' | 'level' | 'turn' | 'closing' | 'summary'
 
@@ -100,10 +100,10 @@ export const selectTurn = (s: State) => {
   const target = card.target !== null ? g.players[card.target].name : null
   return {
     ...base,
-    heading: [name, { text: card.wild ? ' draws a wildcard' : ' draws', name: false }] as TextPart[],
+    heading: [name, { text: DRAWS[card.suit], name: false }] as TextPart[],
     card: {
-      arcanum: card.wild ? WILD : LEVELS[g.level],
-      wild: card.wild,
+      arcanum: card.suit === 'wild' ? WILD : card.suit === 'oblique' ? OBLIQUE : LEVELS[g.level],
+      suit: card.suit,
       redraw: card.redraw,
       canPass: R.canPass(g),
       ariaLabel: card.prompt.text.replaceAll('{name}', target ?? 'someone'),
@@ -124,6 +124,12 @@ export const selectSummary = (s: State) => {
     answered: g.answered,
     details: `${g.passed} ${g.passed === 1 ? 'pass' : 'passes'} · ${minutes} min · ${g.players.length} players`,
   }
+}
+
+const DRAWS: Record<Suit, string> = {
+  level: ' draws',
+  wild: ' draws a wildcard',
+  oblique: ' draws an oblique card',
 }
 
 function fill(text: string, target: string | null): TextPart[] {

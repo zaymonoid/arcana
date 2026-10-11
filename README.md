@@ -19,7 +19,8 @@ Built with [Lit](https://lit.dev), [Tailwind CSS v4](https://tailwindcss.com) an
 3. **Passes:** each player has 2 passes for the whole game. A pass deals a replacement card, already turned over.
 4. **Targets:** cards that name another player pick them by fair rotation. The app chooses whoever has been asked about least, and never the person holding the phone.
 5. **Wildcards:** about 1 card in 8 is a *Wheel of Fortune* card that everyone plays.
-6. **Three levels:**
+6. **Oblique cards:** from level 2 onward, about 1 card in 12 is a *Hanged Man* card: a sideways instruction rather than a question, loosely after Oblique Strategies.
+7. **Three levels:**
 
    | Level | Card | Theme |
    |---|---|---|
@@ -28,7 +29,7 @@ Built with [Lit](https://lit.dev), [Tailwind CSS v4](https://tailwindcss.com) an
    | 3 | XVII · The Star | **Reflection**: on tonight and each other |
 
    A level ends after its set number of rounds. The **⋯ → Go deeper** menu option moves on early.
-7. **Ending:** a closing card (*The Sun*), then a summary (*The World*).
+8. **Ending:** a closing card (*The Sun*), then a summary (*The World*).
 
 Progress is saved in `localStorage`, so a refresh doesn't lose the game.
 

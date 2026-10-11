@@ -10,11 +10,14 @@ export interface Player {
   readonly askedAbout: number
 }
 
+/** Which pile a card came from: the level's own, the wildcards, or the obliques. */
+export type Suit = 'level' | 'wild' | 'oblique'
+
 export interface DrawnCard {
   /** Unique per draw, so a redraw renders as a fresh card. */
   readonly key: number
   readonly prompt: Prompt
-  readonly wild: boolean
+  readonly suit: Suit
   readonly target: number | null
   /** Dealt as a pass, replacing the card the player just turned down. */
   readonly redraw: boolean
