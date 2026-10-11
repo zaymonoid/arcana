@@ -53,7 +53,6 @@ export const cardBack = () => html`
       <path d="M38.5 53.8 A7 7 0 1 0 38.5 66.2 A5.6 5.6 0 1 1 38.5 53.8 Z" fill=${GOLD} fill-opacity="0.9" stroke="none" />
       <polygon points=${starPoints(35, 26, 4, 1.4, 4)} fill=${GOLD} stroke="none" />
       <polygon points=${starPoints(35, 94, 4, 1.4, 4)} fill=${GOLD} stroke="none" />
-      <path d="M10 10 L16 10 M10 10 L10 16 M60 10 L54 10 M60 10 L60 16 M10 110 L16 110 M10 110 L10 104 M60 110 L54 110 M60 110 L60 104" stroke-width="0.5" />
     </g>
     <g fill=${GOLD}>
       ${BACK_STARS.map(([x, y, r]) => svg`<circle cx=${x} cy=${y} r=${r * 0.45} opacity="0.75" />`)}

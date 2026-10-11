@@ -13,10 +13,10 @@ Built with [Lit](https://lit.dev), [Tailwind CSS v4](https://tailwindcss.com) an
    - Standard: 2 rounds per level
    - Deep: 3 rounds per level
 2. **Each turn:**
-   - The app says *"Pass the phone to X"*.
-   - That player taps the face-down card to flip it, then reads it aloud.
+   - The app says *"It's X's turn to draw"*.
+   - That player taps the face-down card (or **Draw a card**) to flip it, then reads it aloud.
    - They tap **Done**. The phone moves clockwise to the next player.
-3. **Passes:** each player has 2 passes for the whole game. A pass draws a replacement card.
+3. **Passes:** each player has 2 passes for the whole game. A pass deals a replacement card, already turned over.
 4. **Targets:** cards that name another player pick them by fair rotation. The app chooses whoever has been asked about least, and never the person holding the phone.
 5. **Wildcards:** about 1 card in 8 is a *Wheel of Fortune* card that everyone plays.
 6. **Three levels:**

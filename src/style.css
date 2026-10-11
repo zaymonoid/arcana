@@ -11,14 +11,15 @@
   --color-wine: #7a2333;
   --color-sepia: #3b2a1a;
 
-  --font-display: 'Cinzel', 'Times New Roman', serif;
-  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
 }
 
 html,
 body {
   background: var(--color-ink);
   color: var(--color-parchment);
+  font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -30,6 +31,188 @@ body {
   background-attachment: fixed;
   min-height: 100dvh;
   overscroll-behavior: none;
+}
+
+/* ---------- Gold button ---------- */
+
+@property --spin {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* Burnished gold with an iridescent edge that circles the button and a sheen that sweeps across it. */
+.btn-gold {
+  position: relative;
+  overflow: hidden;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(180deg, #f5dd97 0%, var(--color-gold) 48%, #b48c3c 100%) padding-box,
+    conic-gradient(from var(--spin), #fff3c4, #d4b15f, #c9a2ff, #7fdfe6, #fff3c4, #d4b15f, #fff3c4) border-box;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.55),
+    inset 0 -2px 0 rgb(80 50 10 / 0.25),
+    0 0.75rem 2rem -0.75rem rgb(212 177 95 / 0.8),
+    0 0 1.5rem -0.5rem rgb(201 162 255 / 0.45);
+  animation: aura-spin 5s linear infinite;
+}
+
+.btn-gold::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.7) 50%, transparent 60%) no-repeat;
+  background-size: 250% 100%;
+  background-position: 150% 0;
+  animation: sheen 4.5s ease-in-out infinite;
+}
+
+.btn-gold:hover {
+  filter: brightness(1.06) saturate(1.1);
+}
+
+.btn-gold:disabled {
+  animation: none;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4);
+}
+
+.btn-gold:disabled::after {
+  display: none;
+}
+
+@keyframes aura-spin {
+  to {
+    --spin: 360deg;
+  }
+}
+
+@keyframes sheen {
+  0%,
+  55% {
+    background-position: 150% 0;
+  }
+  100% {
+    background-position: -50% 0;
+  }
+}
+
+/* ---------- Setup: the seating circle ---------- */
+
+.seat-ring {
+  --r: 5.25rem;
+  position: relative;
+  width: 14.5rem;
+  height: 14.5rem;
+}
+
+.seat-orbit {
+  position: absolute;
+  inset: calc(50% - var(--r));
+  border-radius: 9999px;
+  border: 1px dashed rgb(212 177 95 / 0.35);
+  animation: orbit-turn 60s linear infinite;
+}
+
+.seat-halo {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 7rem;
+  height: 7rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgb(212 177 95 / 0.35) 0%, rgb(201 162 255 / 0.12) 45%, transparent 70%);
+  animation: halo-breathe 4s ease-in-out infinite;
+}
+
+/* Seats sit on the orbit, clockwise from the top, and glide when the circle grows or shrinks. */
+.seat {
+  --a: calc(var(--i) / var(--n) * 1turn);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin: -1.3rem 0 0 -1.3rem;
+  border-radius: 9999px;
+  border: 1px dashed rgb(212 177 95 / 0.4);
+  background: var(--color-ink);
+  color: rgb(212 177 95 / 0.6);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transform: rotate(var(--a)) translateY(calc(var(--r) * -1)) rotate(calc(var(--a) * -1));
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.75, 0.25, 1),
+    background 0.3s,
+    color 0.3s,
+    box-shadow 0.3s;
+}
+
+.seat.is-filled {
+  border: 1.5px solid #fff3c4;
+  background: linear-gradient(160deg, #f5dd97, var(--color-gold) 55%, #b48c3c);
+  color: var(--color-ink);
+  font-size: 1.15rem;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    0 0 1.25rem -0.25rem rgb(212 177 95 / 0.7);
+  animation: seat-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes orbit-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes halo-breathe {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes seat-pop {
+  from {
+    scale: 0.6;
+  }
+}
+
+/* Length options as small upright cards. */
+.length-card {
+  display: flex;
+  aspect-ratio: 4 / 5;
+  flex-direction: column;
+  align-items: flex-start;
+  border-radius: 1rem;
+  border: 1px solid rgb(212 177 95 / 0.2);
+  background: rgb(22 29 51 / 0.6);
+  padding: 0.85rem;
+  text-align: left;
+  color: rgb(244 234 211 / 0.7);
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.75, 0.25, 1),
+    border-color 0.3s,
+    box-shadow 0.3s,
+    color 0.3s;
+}
+
+.length-card.is-selected {
+  transform: translateY(-0.3rem);
+  border-color: var(--color-gold);
+  background:
+    radial-gradient(ellipse at 30% 0%, rgb(212 177 95 / 0.28), transparent 70%),
+    var(--color-ink-2);
+  color: var(--color-gold);
+  box-shadow: 0 1rem 2rem -1rem rgb(212 177 95 / 0.6);
 }
 
 /* ---------- Tarot card ---------- */
@@ -95,6 +278,24 @@ body {
   animation: deal 0.6s cubic-bezier(0.2, 0.75, 0.25, 1) both;
 }
 
+/* A card dealt as a pass: it lands, then turns itself over. */
+.deal-flip {
+  animation: deal 0.5s cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.deal-flip .tarot-inner {
+  animation: flip-over 0.8s 0.3s cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+@keyframes flip-over {
+  from {
+    transform: none;
+  }
+  to {
+    transform: rotateY(180deg);
+  }
+}
+
 @keyframes deal {
   from {
     opacity: 0;
@@ -121,27 +322,20 @@ body {
   }
 }
 
-.shimmer {
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .tarot-inner {
+  .tarot-inner,
+  .seat {
     transition-duration: 0.01s;
   }
   .deal-in,
+  .deal-flip,
+  .deal-flip .tarot-inner,
   .fade-in,
-  .shimmer {
+  .btn-gold,
+  .btn-gold::after,
+  .seat-orbit,
+  .seat-halo,
+  .seat.is-filled {
     animation: none;
   }
 }
