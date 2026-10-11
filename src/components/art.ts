@@ -29,7 +29,7 @@ const BACK_STARS: [number, number, number][] = [
   [35, 14, 0.8], [35, 106, 0.8],
 ]
 
-/** The face-down side: midnight navy, gold frame, sun and moon. */
+/** The face-down side: midnight navy and a gold frame. The sigil in the middle is `<card-sigil>`. */
 export const cardBack = () => html`
   <svg viewBox="0 0 70 120" class="block h-full w-full" aria-hidden="true">
     <defs>
@@ -46,11 +46,6 @@ export const cardBack = () => html`
     <g fill="none" stroke=${GOLD} stroke-width="0.6">
       <rect x="3.5" y="3.5" width="63" height="113" rx="3" />
       <rect x="5.5" y="5.5" width="59" height="109" rx="2" stroke-width="0.3" />
-      <circle cx="35" cy="60" r="19" stroke-width="0.4" />
-      <circle cx="35" cy="60" r="21.5" stroke-width="0.25" stroke-dasharray="0.6 1.2" />
-      <g stroke-width="0.35">${rays(35, 60, 12.5, 17.5, 24)}</g>
-      <circle cx="35" cy="60" r="10" />
-      <path d="M38.5 53.8 A7 7 0 1 0 38.5 66.2 A5.6 5.6 0 1 1 38.5 53.8 Z" fill=${GOLD} fill-opacity="0.9" stroke="none" />
       <polygon points=${starPoints(35, 26, 4, 1.4, 4)} fill=${GOLD} stroke="none" />
       <polygon points=${starPoints(35, 94, 4, 1.4, 4)} fill=${GOLD} stroke="none" />
     </g>
