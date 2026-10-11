@@ -37,12 +37,33 @@ Progress is saved in `localStorage`, so a refresh doesn't lose the game.
 ```sh
 npm install
 npm run dev      # http://localhost:5173
+npm test         # store unit tests (vitest)
 npm run build    # type-check + build to dist/
 ```
 
-## Code layout
+## Architecture
 
-- `src/deck.ts`: every question and the arcana. Add cards here; `{name}` marks a card about another player.
-- `src/game.ts`: the game rules as pure state transitions (turn order, targets, passes, levels).
-- `src/app.ts`: the `<arcana-app>` Lit component. It renders into light DOM so Tailwind applies.
-- `src/art.ts`: the SVG card back and emblems.
+State is managed with [katha](https://github.com/zaymonoid/katha): a reducer plus Effect processes.
+**Hard rule: all logic lives in the store. Components only dispatch actions and read state.**
+
+```
+src/
+  deck.ts                 questions + arcana (data)
+  store/
+    state.ts              State, Action union, initial state
+    rules.ts              pure game rules (randomness/time passed in as arguments)
+    reducer.ts            State × Action → State, built from rules
+    processes.ts          side effects: dice rolls (Effect Random), clock, localStorage
+    selectors.ts          view models: everything the UI shows, pre-derived
+    index.ts              store boot (ManagedRuntime) + exported `store` handle
+  components/
+    arcana-app.ts         <arcana-app>: fromStore(selectors) + store.put(actions), nothing else
+    iridescent-shimmer.ts WebGL flow-field iridescence over face-down cards
+    art.ts                SVG card back + emblems
+```
+
+UI intents (`card/draw`, `card/pass`, `game/start`) are handled by processes. Each one rolls dice or reads the clock, then dispatches a fully formed event (`card/dealt`, `game/started`) that the reducer applies purely.
+
+On cards that name another player, the target is chosen by fair rotation. The app picks whoever has been asked about least, and breaks ties toward players whose own turn is still to come this round. This keeps the counts exactly even at the end of every round, and a randomized test checks it.
+
+The face-down shimmer is a fragment shader. Each pixel is advected along a noise-driven flow field, and fine contour filaments are mapped through a thin-film interference palette, with a slow sweeping glint on top. It fades out as the card flips. It renders one still frame under `prefers-reduced-motion`, and does nothing if WebGL is unavailable.

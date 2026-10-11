@@ -42,6 +42,10 @@ body {
   font-size: calc(var(--w) / 18);
 }
 
+.tarot-sm {
+  --w: min(38vw, calc(30dvh * 7 / 12), 9.5rem);
+}
+
 .tarot-inner {
   position: relative;
   width: 100%;
