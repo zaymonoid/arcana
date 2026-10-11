@@ -286,13 +286,14 @@ body {
 }
 
 /* The double rule framing each face. On the back it sits above the shaders, which run under it to the card's edge. */
+/* A solid band of gold flush with the card's edge, and a hairline inset within it. */
 .tarot-frame {
   position: absolute;
-  inset: 0.55em;
-  border: 0.12em solid var(--color-gold-dim);
-  border-radius: 0.5em;
-  outline: 0.05em solid var(--color-gold-dim);
-  outline-offset: -0.35em;
+  inset: 0;
+  border: 0.45em solid var(--color-gold-dim);
+  border-radius: inherit;
+  outline: 0.06em solid var(--color-gold-dim);
+  outline-offset: -0.85em;
   pointer-events: none;
 }
 
