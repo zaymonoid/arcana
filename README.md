@@ -14,10 +14,11 @@ Built with [Lit](https://lit.dev), [Tailwind CSS v4](https://tailwindcss.com) an
    - Deep: 3 rounds per level
 2. **Each turn:**
    - The app says *"It's X's turn to draw"*.
-   - That player taps the face-down card (or **Draw a card**) to flip it, then reads it aloud.
-   - They tap **Done**. The phone moves clockwise to the next player.
+   - That player taps the face-down card to flip it, then reads it aloud.
+   - When the card has been answered they tap it again. The phone moves clockwise to the next player.
+   - Tapping the card (or anywhere around it) is how the whole game moves on: it also begins each level and finishes the reading. The **↶** button in the top left undoes an accidental tap.
 3. **Passes:** each player has 2 passes for the whole game. A pass deals a replacement card, already turned over.
-4. **Targets:** cards that name another player pick them by fair rotation. The app chooses whoever has been asked about least, and never the person holding the phone.
+4. **Targets:** nobody answers their own draw. Cards that name another player, and questions about "you", pick who they're for by fair rotation: whoever has been asked about least, and never the person holding the phone. The drawer reads the card to them.
 5. **Wildcards:** about 1 card in 8 is a *Wheel of Fortune* card that everyone plays.
 6. **Oblique cards:** from level 2 onward, about 1 card in 12 is a *Hanged Man* card: a sideways instruction rather than a question, loosely after Oblique Strategies.
 7. **Three levels:**
@@ -25,7 +26,7 @@ Built with [Lit](https://lit.dev), [Tailwind CSS v4](https://tailwindcss.com) an
    | Level | Card | Theme |
    |---|---|---|
    | 1 | 0 · The Fool | **Perception**: guess about someone, then they reveal the truth |
-   | 2 | VI · The Lovers | **Connection**: answer about yourself |
+   | 2 | VI · The Lovers | **Connection**: read a question to someone, who answers honestly |
    | 3 | XVII · The Star | **Reflection**: on tonight and each other |
 
    A level ends after its set number of rounds. The **⋯ → Go deeper** menu option moves on early.

@@ -70,6 +70,61 @@ describe('rules', () => {
     expect(turn!.heading.map((p) => p.text).join('')).toBe('A draws an oblique card')
   })
 
+  it('never has the drawer answer their own card', () => {
+    for (let n = 2; n <= 4; n++) {
+      const names = Array.from({ length: n }, (_, i) => `P${i}`)
+      let s = reduce(started(names, 'deep'), { id: 'level/begin' })
+      for (let turn = 0; turn < n * 3; turn++) {
+        s = dealt(s, [0.9, Math.random(), Math.random()])
+        const { card, current } = s.game!
+        if (card!.prompt.kind !== 'group') {
+          expect(card!.target).not.toBeNull()
+          expect(card!.target).not.toBe(current)
+        }
+        s = reduce(s, { id: 'card/done' })
+      }
+    }
+  })
+
+  it('reads a question about "you" to someone else, who answers', () => {
+    let s = reduce(started(['A', 'B', 'C']), { id: 'level/begin' })
+    for (let t = 0; t < 3; t++) s = reduce(dealt(s), { id: 'card/done' })
+    s = reduce(s, { id: 'level/begin' })
+    s = dealt(s, [0.9, 0, 0.5])
+    const card = s.game!.card!
+    expect(card.prompt.kind).toBe('self')
+    expect(card.target).not.toBe(s.game!.current)
+    const turn = S.selectTurn(s)!
+    const target = s.game!.players[card.target!].name
+    expect(turn.card!.instruction.map((p) => p.text).join('')).toBe(`A asks — ${target} answers.`)
+    s = reduce(s, { id: 'card/done' })
+    expect(s.game!.players[card.target!].askedAbout).toBe(2)
+  })
+
+  it('undoes the taps that move the game on, newest first', () => {
+    const intro = started()
+    expect(S.selectHud(intro)!.canUndo).toBe(false)
+    expect(reduce(intro, { id: 'game/undo' })).toBe(intro)
+    const waiting = reduce(intro, { id: 'level/begin' })
+    const drawn = dealt(waiting)
+    const next = reduce(drawn, { id: 'card/done' })
+    expect(S.selectHud(next)!.canUndo).toBe(true)
+    expect(next.history).toHaveLength(3)
+    const undone = reduce(next, { id: 'game/undo' })
+    expect(undone.game).toBe(drawn.game)
+    expect(reduce(undone, { id: 'game/undo' }).game).toBe(waiting.game)
+    expect(reduce(undone, { id: 'game/undo' }, { id: 'game/undo' }).game).toBe(intro.game)
+    expect(reduce(undone, { id: 'game/undo' }, { id: 'game/undo' }, { id: 'game/undo' }).game).toBe(intro.game)
+  })
+
+  it('caps the undo history and clears it for a new game', () => {
+    let s = reduce(started(['A', 'B'], 'deep'), { id: 'level/begin' })
+    for (let t = 0; t < 2 * R.UNDO_DEPTH; t++) s = reduce(dealt(s), { id: 'card/done' })
+    expect(s.history).toHaveLength(R.UNDO_DEPTH)
+    expect(reduce(s, { id: 'game/started', data: { names: ['A', 'B'], length: 'quick', startedAt: 0 } }).history).toEqual([])
+    expect(reduce(s, { id: 'menu/end-confirm' }).history).toEqual([])
+  })
+
   it('ignores done before a card is drawn', () => {
     const s = reduce(started(), { id: 'level/begin' })
     expect(reduce(s, { id: 'card/done' })).toBe(s)

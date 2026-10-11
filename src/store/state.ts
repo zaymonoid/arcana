@@ -58,6 +58,8 @@ export interface State {
   readonly game: Game | null
   /** An unfinished game found in storage, offered for resume. */
   readonly saved: Game | null
+  /** Snapshots of the game before each tap that moved it on, newest last, for undo. */
+  readonly history: readonly Game[]
   readonly ui: UiState
 }
 
@@ -66,6 +68,7 @@ export const initialState: State = {
   setup: { names: ['', '', ''], length: 'standard', focus: null },
   game: null,
   saved: null,
+  history: [],
   ui: { menuOpen: false, confirmingEnd: false },
 }
 
@@ -87,6 +90,7 @@ export type Action =
   | { id: 'game/finish' }
   | { id: 'game/finished'; data: { endedAt: number } }
   | { id: 'game/new-players' }
+  | { id: 'game/undo' }
   // Turns
   | { id: 'level/begin' }
   | { id: 'level/skip' }

@@ -32,19 +32,22 @@ function reduceSetup(setup: SetupState, action: Action): SetupState | undefined 
   }
 }
 
-/** Game transitions that only apply while a game is on the table. */
-function reduceGame(game: Game, action: Action): Game | undefined {
+/**
+ * Game transitions that only apply while a game is on the table. `undoable`
+ * marks the taps that move the game on, which the undo button can take back.
+ */
+function reduceGame(game: Game, action: Action): { game: Game; undoable: boolean } | undefined {
   switch (action.id) {
     case 'level/begin':
-      return R.beginLevel(game)
+      return { game: R.beginLevel(game), undoable: true }
     case 'level/skip':
-      return R.goDeeper(game)
+      return { game: R.goDeeper(game), undoable: true }
     case 'card/dealt':
-      return R.deal(game, action.data.card, action.data.used, action.data.isPass)
+      return { game: R.deal(game, action.data.card, action.data.used, action.data.isPass), undoable: true }
     case 'card/done':
-      return R.done(game)
+      return { game: R.done(game), undoable: true }
     case 'game/finished':
-      return R.finish(game, action.data.endedAt)
+      return { game: R.finish(game, action.data.endedAt), undoable: false }
     default:
       return undefined
   }
@@ -68,16 +71,21 @@ export const reducer: Reducer<State, Action> = (state, action) => {
       return {
         ...state,
         saved: null,
+        history: [],
         ui: closedUi,
         setup: { ...state.setup, names: [...action.data.names], length: action.data.length, focus: null },
         game: R.newGame(action.data.names, action.data.length, action.data.startedAt),
       }
     case 'game/resume':
-      return state.saved ? { ...state, game: state.saved, saved: null, ui: closedUi } : undefined
+      return state.saved ? { ...state, game: state.saved, saved: null, history: [], ui: closedUi } : undefined
     case 'game/discard':
       return state.saved ? { ...state, saved: null } : undefined
     case 'game/new-players':
-      return { ...state, game: null, ui: closedUi }
+      return { ...state, game: null, history: [], ui: closedUi }
+    case 'game/undo': {
+      const previous = state.history.at(-1)
+      return previous && state.game ? { ...state, game: previous, history: state.history.slice(0, -1) } : undefined
+    }
 
     case 'menu/open':
       return { ...state, ui: { menuOpen: true, confirmingEnd: false } }
@@ -87,16 +95,17 @@ export const reducer: Reducer<State, Action> = (state, action) => {
     case 'menu/end-request':
       return { ...state, ui: { ...state.ui, confirmingEnd: true } }
     case 'menu/end-confirm':
-      return { ...state, game: null, ui: closedUi }
+      return { ...state, game: null, history: [], ui: closedUi }
   }
 
   const setup = reduceSetup(state.setup, action)
   if (setup) return { ...state, setup }
 
   if (state.game) {
-    const game = reduceGame(state.game, action)
-    if (game && game !== state.game) {
-      return { ...state, game, ui: action.id === 'level/skip' ? closedUi : state.ui }
+    const next = reduceGame(state.game, action)
+    if (next && next.game !== state.game) {
+      const history = next.undoable ? [...state.history, state.game].slice(-R.UNDO_DEPTH) : state.history
+      return { ...state, game: next.game, history, ui: action.id === 'level/skip' ? closedUi : state.ui }
     }
   }
   return undefined

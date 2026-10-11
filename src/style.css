@@ -217,8 +217,13 @@ body {
 
 /* ---------- Tarot card ---------- */
 
+/*
+ * Sized to leave room for everything around it on the turn screen (top bar,
+ * heading, instruction and pass button), so the whole turn fits one phone
+ * screen without scrolling.
+ */
 .tarot {
-  --w: min(78vw, calc(62dvh * 7 / 12), 21rem);
+  --w: min(78vw, calc((100dvh - 17rem - env(safe-area-inset-top, 0px)) * 7 / 12), 21rem);
   width: var(--w);
   aspect-ratio: 7 / 12;
   perspective: 1400px;
@@ -258,6 +263,15 @@ body {
   background:
     radial-gradient(ellipse at 50% 40%, #fbf4e3 0%, var(--color-parchment) 55%, var(--color-parchment-2) 100%);
   color: var(--color-sepia);
+}
+
+/* The card is the button: a light press as it's tapped. */
+.tap-area .tarot {
+  transition: scale 0.15s ease-out;
+}
+
+.tap-area:active .tarot {
+  scale: 0.985;
 }
 
 /* A card shown face-up with no flip (level intros, closing, summary). */

@@ -2,9 +2,9 @@
  * The deck. `{name}` marks a card that is about another player — the game
  * fills it in with a fairly rotated target.
  *
- * Kinds decide who speaks:
+ * Kinds decide who speaks. Nobody answers their own draw:
  *   guess — the active player guesses about the target, who then reveals the truth
- *   self  — the active player answers about themselves
+ *   self  — a question about "you": the active player reads it to the target, who answers
  *   ask   — the active player speaks to (or asks) the target
  *   group — everyone takes part
  */

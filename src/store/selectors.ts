@@ -62,6 +62,7 @@ export const selectHud = (s: State) => {
     rounds: R.roundsInLevel(g),
     menuOpen: s.ui.menuOpen,
     confirmingEnd: s.ui.confirmingEnd,
+    canUndo: s.history.length > 0,
     players: g.players.map((p, i) => ({ name: p.name, passes: p.passes, current: i === g.current })),
     deeperLabel: last ? 'Go to the closing card' : `Go deeper → ${LEVELS[g.level + 1].theme}`,
   }
@@ -71,7 +72,12 @@ export const selectLevelIntro = (s: State) => {
   const g = s.game
   if (!g) return null
   const arcanum = LEVELS[g.level]
-  return { key: g.level, arcanum, lead: g.level === 0 ? 'The reading begins with' : 'Going deeper —' }
+  return {
+    key: g.level,
+    arcanum,
+    lead: g.level === 0 ? 'The reading begins with' : 'Going deeper —',
+    hint: `Tap the card to begin ${arcanum.theme}`,
+  }
 }
 
 /** A run of card text: plain words, or a highlighted player name. */
@@ -92,12 +98,12 @@ export const selectTurn = (s: State) => {
     sigil: LEVELS[g.level].sigil,
     /** Varies that design's details from card to card. */
     seed: R.cardSeed(g),
-    passesLabel: `${player.passes} ${player.passes === 1 ? 'pass' : 'passes'} left`,
   }
   if (!card) {
     return {
       ...base,
       heading: [{ text: 'It’s ', name: false }, name, { text: '’s turn to draw', name: false }] as TextPart[],
+      hint: 'Tap the card to draw',
       card: null,
     }
   }
@@ -105,12 +111,15 @@ export const selectTurn = (s: State) => {
   return {
     ...base,
     heading: [name, { text: DRAWS[card.suit], name: false }] as TextPart[],
+    hint: 'Tap the card when you’re done',
     card: {
+      /** Changes with every deal, so the view can tell a fresh card from a re-render. */
+      key: card.key,
       arcanum: card.suit === 'wild' ? WILD : card.suit === 'oblique' ? OBLIQUE : LEVELS[g.level],
       suit: card.suit,
       redraw: card.redraw,
       canPass: R.canPass(g),
-      ariaLabel: card.prompt.text.replaceAll('{name}', target ?? 'someone'),
+      ariaLabel: `${card.prompt.text.replaceAll('{name}', target ?? 'someone')} Tap when done.`,
       text: fill(card.prompt.text, target),
       instruction: instruction(card.prompt.kind, player.name, target),
     },
@@ -151,7 +160,7 @@ function instruction(kind: Kind, player: string, target: string | null): TextPar
     case 'guess':
       return [{ text: `${player} guesses — then `, name: false }, t, { text: ' reveals how close they got.', name: false }]
     case 'self':
-      return [{ text: `${player} answers.`, name: false }]
+      return [{ text: `${player} asks — `, name: false }, t, { text: ' answers.', name: false }]
     case 'ask':
       return [{ text: `${player}, this one is for `, name: false }, t, { text: '.', name: false }]
     case 'group':
