@@ -62,6 +62,20 @@ export function deal(g: Game, card: DrawnCard, used: string[], isPass: boolean):
   }
 }
 
+/**
+ * A seed in [0, 1) for the face-down card's artwork. It holds steady across
+ * the draw (so the design doesn't change as the card flips) and is fresh for
+ * every turn and every card dealt as a pass.
+ */
+export function cardSeed(g: Game): number {
+  const redraw = g.card?.redraw ? g.card.key : 0
+  let h = (g.startedAt ^ (g.level * 0x9e3779b1) ^ (g.turnsInLevel * 0x85ebca6b) ^ (redraw * 0xc2b2ae35)) >>> 0
+  h = Math.imul(h ^ (h >>> 16), 0x7feb352d) >>> 0
+  h = Math.imul(h ^ (h >>> 15), 0x846ca68b) >>> 0
+  h = (h ^ (h >>> 16)) >>> 0
+  return h / 0x100000000
+}
+
 /** Card answered → next player in seating order, or the next level. */
 export function done(g: Game): Game {
   if (g.phase !== 'card' || !g.card) return g

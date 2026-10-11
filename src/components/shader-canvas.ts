@@ -3,10 +3,12 @@ import { LitElement, css, html, type CSSResultGroup } from 'lit'
 /**
  * A full-bleed WebGL canvas that runs one fragment shader.
  *
- * Subclasses provide `frag`, which receives `uRes`, `uTime`, `uFade` and
- * `uVariant` (from `variant()`, for shaders that draw more than one design).
- * Purely presentational: `active` comes from the store; when it turns off
- * the effect fades out and the render loop stops.
+ * Subclasses provide `frag`, which receives `uRes`, `uTime`, `uFade`,
+ * `uSeed` (from the `seed` property, a number in [0, 1) that lets a shader
+ * vary its details from card to card) and `uVariant` (from `variant()`, for
+ * shaders that draw more than one design). Purely presentational: `active`
+ * and `seed` come from the store; when `active` turns off the effect fades
+ * out and the render loop stops.
  */
 
 const VERT = `
@@ -17,8 +19,9 @@ void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export abstract class ShaderCanvas extends LitElement {
-  static properties = { active: { type: Boolean } }
+  static properties = { active: { type: Boolean }, seed: { type: Number } }
   declare active: boolean
+  declare seed: number
 
   protected abstract readonly frag: string
 
@@ -42,7 +45,7 @@ export abstract class ShaderCanvas extends LitElement {
   `
 
   private gl: WebGLRenderingContext | null = null
-  private uniforms: Record<'res' | 'time' | 'fade' | 'variant', WebGLUniformLocation | null> | null = null
+  private uniforms: Record<'res' | 'time' | 'fade' | 'seed' | 'variant', WebGLUniformLocation | null> | null = null
   private raf = 0
   private fade = 0
   private start = performance.now()
@@ -51,6 +54,7 @@ export abstract class ShaderCanvas extends LitElement {
   constructor() {
     super()
     this.active = false
+    this.seed = 0
   }
 
   render() {
@@ -112,6 +116,7 @@ export abstract class ShaderCanvas extends LitElement {
       res: gl.getUniformLocation(prog, 'uRes'),
       time: gl.getUniformLocation(prog, 'uTime'),
       fade: gl.getUniformLocation(prog, 'uFade'),
+      seed: gl.getUniformLocation(prog, 'uSeed'),
       variant: gl.getUniformLocation(prog, 'uVariant'),
     }
     gl.clearColor(0, 0, 0, 0)
@@ -156,6 +161,7 @@ export abstract class ShaderCanvas extends LitElement {
     gl.uniform2f(u.res, gl.canvas.width, gl.canvas.height)
     gl.uniform1f(u.time, (performance.now() - this.start) / 1000)
     gl.uniform1f(u.fade, this.fade)
+    gl.uniform1f(u.seed, this.seed)
     gl.uniform1f(u.variant, this.variant())
     gl.drawArrays(gl.TRIANGLES, 0, 3)
   }

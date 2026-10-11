@@ -7,6 +7,7 @@ import { ShaderCanvas } from './shader-canvas'
  * Each pixel is advected along a noise-driven flow field; the distance it
  * travels and the streak texture it lands on set a thin-film "thickness",
  * which maps to an oil-slick spectrum. A slow diagonal glint sweeps across.
+ * The seed offsets time, so each card catches the flow at a different moment.
  */
 
 const FRAG = `
@@ -14,6 +15,7 @@ precision highp float;
 uniform vec2 uRes;
 uniform float uTime;
 uniform float uFade;
+uniform float uSeed;
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -44,7 +46,7 @@ vec2 flow(vec2 p, float t) {
 void main() {
   vec2 uv = gl_FragCoord.xy / uRes;
   vec2 p = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y * 3.0;
-  float t = uTime;
+  float t = uTime + uSeed * 120.0;
 
   // Integrate a short streamline through the field.
   vec2 q = p;

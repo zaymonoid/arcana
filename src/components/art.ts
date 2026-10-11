@@ -35,11 +35,7 @@ export const cardBack = () => html`
       </pattern>
     </defs>
     <rect width="70" height="120" fill="url(#back-bg)" />
-    <rect x="5" y="5" width="60" height="110" fill="url(#back-grid)" />
-    <g fill="none" stroke=${GOLD} stroke-width="0.6">
-      <rect x="3.5" y="3.5" width="63" height="113" rx="3" />
-      <rect x="5.5" y="5.5" width="59" height="109" rx="2" stroke-width="0.3" />
-    </g>
+    <rect width="70" height="120" fill="url(#back-grid)" />
   </svg>
 `
 
