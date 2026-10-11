@@ -194,10 +194,20 @@ export class ArcanaApp extends LitElement {
     const h = this.hud.value
     if (!h) return nothing
     return html`
-      <header class="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <div class="font-sans text-xs font-bold tracking-[0.22em] text-gold uppercase">Level ${h.levelNumber} · ${h.theme}</div>
-          <div class="mt-1 flex items-center gap-1.5">
+      <header class="mb-3 flex items-center justify-between gap-3">
+        <button
+          class="grid h-11 w-11 shrink-0 place-items-center rounded-full text-gold/70 transition hover:text-gold disabled:invisible"
+          aria-label="Undo the last tap"
+          ?disabled=${!h.canUndo}
+          @click=${() => put({ id: 'game/undo' })}
+        >
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 14 4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" />
+          </svg>
+        </button>
+        <div class="min-w-0 flex-1 text-center">
+          <div class="truncate font-sans text-xs font-bold tracking-[0.22em] text-gold uppercase">Level ${h.levelNumber} · ${h.theme}</div>
+          <div class="mt-1 flex items-center justify-center gap-1.5">
             ${h.progress.map(
               (p) => html`<span class="h-1 w-6 rounded-full ${p === 'done' ? 'bg-gold' : p === 'current' ? 'bg-gold/60' : 'bg-parchment/15'}"></span>`,
             )}
@@ -205,7 +215,7 @@ export class ArcanaApp extends LitElement {
           </div>
         </div>
         <button
-          class="grid h-11 w-11 place-items-center rounded-full border border-gold/30 text-gold"
+          class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-gold/30 text-gold"
           aria-label="Menu"
           @click=${() => put({ id: 'menu/open' })}
         >
@@ -259,56 +269,74 @@ export class ArcanaApp extends LitElement {
     if (!v) return nothing
     return html`
       ${this.renderTopBar()}
-      <div class="flex flex-1 flex-col items-center justify-center gap-6">
-        <p class="fade-in font-sans text-parchment/70">${v.lead}</p>
-        ${keyed(`level-${v.key}`, staticCard(v.arcanum, html`<p class="font-display text-[1.15em] leading-snug italic">${v.arcanum.blurb}</p>`))}
-      </div>
-      <button class="${btnGold} mt-6 w-full py-4" @click=${() => put({ id: 'level/begin' })}>Begin ${v.arcanum.theme}</button>
+      ${tapArea(
+        `Begin ${v.arcanum.theme}`,
+        () => put({ id: 'level/begin' }),
+        html`
+          <p class="fade-in font-sans text-parchment/70">${v.lead}</p>
+          ${keyed(`level-${v.key}`, staticCard(v.arcanum, html`<p class="font-display text-[1.15em] leading-snug italic">${v.arcanum.blurb}</p>`))}
+        `,
+      )}
+      ${hint(v.hint)}
     `
+  }
+
+  /**
+   * Ignore taps on the card while it is still turning over, so a double
+   * tap can't draw and finish a turn in one go. Animation timing only.
+   */
+  private cardSettlesAt = 0
+  private lastCardKey: number | null = null
+  private noteCardChange() {
+    const key = this.turn.value?.card?.key ?? null
+    if (key !== this.lastCardKey) {
+      this.lastCardKey = key
+      if (key !== null) this.cardSettlesAt = performance.now() + FLIP_MS
+    }
   }
 
   private renderTurn() {
     const v = this.turn.value
     if (!v) return nothing
+    this.noteCardChange()
     const c = v.card
     const front = c
       ? cardFront(c.arcanum, html`<p class="font-display text-[1.35em] leading-snug font-medium">${parts(c.text, 'text-wine')}</p>`)
       : nothing
-    const draw = () => put({ id: 'card/draw' })
+    const advance = () => {
+      if (!c) put({ id: 'card/draw' })
+      else if (performance.now() >= this.cardSettlesAt) put({ id: 'card/done' })
+    }
     return html`
       ${this.renderTopBar()}
-      <div class="text-center">
-        <p class="font-display text-[1.65rem] leading-tight font-medium text-parchment">${parts(v.heading, 'text-gold')}</p>
-        <div class="mt-2 flex items-center justify-center gap-2 text-sm text-parchment/55">${passTokens(v.passes)} ${v.passesLabel}</div>
-      </div>
-      <div class="flex flex-1 items-center justify-center py-4">
-        ${keyed(
+      <p class="text-center font-display text-[1.65rem] leading-tight font-medium text-parchment">${parts(v.heading, 'text-gold')}</p>
+      ${tapArea(
+        c ? c.ariaLabel : 'Draw a card',
+        advance,
+        keyed(
           v.key,
-          html`<button
-            class="tarot ${c ? 'is-flipped' : ''} ${c?.redraw ? 'deal-flip' : 'deal-in'}"
-            aria-label=${c ? c.ariaLabel : 'Draw a card'}
-            ?disabled=${!!c}
-            @click=${draw}
-          >
+          html`<div class="tarot ${c ? 'is-flipped' : ''} ${c?.redraw ? 'deal-flip' : 'deal-in'}">
             <div class="tarot-inner">
               <div class="tarot-face">${cardBack()}<card-sigil sigil=${v.sigil} ?active=${!c}></card-sigil><iridescent-shimmer ?active=${!c}></iridescent-shimmer></div>
               <div class="tarot-face tarot-front">${front}</div>
             </div>
-          </button>`,
-        )}
-      </div>
-      <div class="min-h-[7.5rem]">
+          </div>`,
+        ),
+      )}
+      <div class="flex min-h-[7rem] flex-col items-center gap-3">
         ${c
           ? html`
-              <p class="fade-in mb-4 text-center text-base leading-snug text-parchment/80">${parts(c.instruction, 'text-gold')}</p>
-              <div class="fade-in grid grid-cols-[auto_1fr] gap-3">
-                <button class="${btnGhost} inline-flex items-center gap-2" ?disabled=${!c.canPass} @click=${() => put({ id: 'card/pass' })}>
-                  Pass ${passTokens(v.passes)}
-                </button>
-                <button class="${btnGold} py-4" @click=${() => put({ id: 'card/done' })}>Done</button>
-              </div>
+              <p class="fade-in text-center text-base leading-snug text-parchment/80">${parts(c.instruction, 'text-gold')}</p>
+              <button
+                class="fade-in inline-flex items-center gap-2 rounded-full border border-gold/35 px-4 py-2 font-sans text-xs font-extrabold tracking-[0.14em] text-gold uppercase transition active:scale-[0.97] disabled:opacity-35"
+                ?disabled=${!c.canPass}
+                @click=${() => put({ id: 'card/pass' })}
+              >
+                Pass ${passTokens(v.passes)}
+              </button>
             `
-          : html`<div class="pt-[3.25rem]"><button class="${btnGold} w-full py-4" @click=${draw}>Draw a card</button></div>`}
+          : nothing}
+        ${hint(v.hint)}
       </div>
     `
   }
@@ -316,11 +344,15 @@ export class ArcanaApp extends LitElement {
   private renderClosing() {
     const arcanum = S.selectClosing()
     return html`
-      <div class="flex flex-1 flex-col items-center justify-center gap-6">
-        <p class="fade-in font-sans text-parchment/70">The final card</p>
-        ${staticCard(arcanum, html`<p class="font-display text-[1.15em] leading-snug italic">${arcanum.blurb}</p>`)}
-      </div>
-      <button class="${btnGold} mt-6 w-full py-4" @click=${() => put({ id: 'game/finish' })}>Finish the reading</button>
+      ${tapArea(
+        'Finish the reading',
+        () => put({ id: 'game/finish' }),
+        html`
+          <p class="fade-in font-sans text-parchment/70">The final card</p>
+          ${staticCard(arcanum, html`<p class="font-display text-[1.15em] leading-snug italic">${arcanum.blurb}</p>`)}
+        `,
+      )}
+      ${hint('Tap the card to finish')}
     `
   }
 
@@ -347,6 +379,18 @@ export class ArcanaApp extends LitElement {
 }
 
 // ---------- Presentational helpers ----------
+
+/** How long the card takes to turn over (see `.tarot-inner` in style.css), plus the pass deal's delay. */
+const FLIP_MS = 1100
+
+/** The middle of the screen is one big tap target that moves the game on. */
+const tapArea = (label: string, onTap: () => void, body: unknown) => html`
+  <button class="tap-area flex w-full flex-1 flex-col items-center justify-center gap-5 py-3" aria-label=${label} @click=${onTap}>
+    ${body}
+  </button>
+`
+
+const hint = (text: string) => html`<p class="fade-in text-center font-sans text-xs tracking-[0.12em] text-parchment/40 uppercase">${text}</p>`
 
 const parts = (runs: S.TextPart[], nameClass: string) =>
   runs.map((r) => (r.name ? html`<span class="font-semibold ${nameClass}">${r.text}</span>` : r.text))
