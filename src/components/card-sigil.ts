@@ -19,9 +19,9 @@ uniform float uFade;
 
 const float PI = 3.14159265;
 const float FOLDS = 7.0;
-const float SIZE = 1.25;
+const float SIZE = 3.0;
 // Stroke weight, scaled down so lines stay fine at a large SIZE.
-const float LINE = 0.5;
+const float LINE = 0.4;
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -70,10 +70,10 @@ float sigil(vec2 uv, float t) {
   float r = length(uv);
   float ang = atan(uv.y, uv.x);
 
-  // Wobbling centre and a pair of framing rings.
+  // Wobbling centre, and a pair of rings circling the inner arcs.
   float d = r - (0.035 * breathe + 0.004 * sin(ang * 3.0 + t * 0.8));
-  float ring1 = 0.40 * breathe + 0.010 * sin(ang * 5.0 + t * 0.4) + 0.006 * sin(ang * 8.0 - t * 0.6);
-  float ring2 = 0.43 * breathe + 0.008 * sin(ang * 6.0 - t * 0.35);
+  float ring1 = 0.20 * breathe + 0.005 * sin(ang * 5.0 + t * 0.4) + 0.003 * sin(ang * 8.0 - t * 0.6);
+  float ring2 = 0.215 * breathe + 0.004 * sin(ang * 6.0 - t * 0.35);
   d = min(d, abs(r - ring1) - 0.005 * LINE);
   d = min(d, abs(r - ring2) - 0.002 * LINE);
 
@@ -110,9 +110,9 @@ float sigil(vec2 uv, float t) {
 }
 
 void main() {
-  // Centred coordinates scaled to the frame's height: at SIZE 1.25 the outer
-  // rings (radius ~0.43) reach the top and bottom even when the sigil breathes in.
-  vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / (uRes.y * SIZE);
+  // Centred coordinates scaled to the frame's width: SIZE > 1 lets the sigil
+  // run off the edges so it fills the frame rather than fits it.
+  vec2 uv = (gl_FragCoord.xy - 0.5 * uRes) / (uRes.x * SIZE);
   float t = uTime * 1.4;
   float d = sigil(uv, t);
 
