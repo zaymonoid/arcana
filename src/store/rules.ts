@@ -59,12 +59,9 @@ export function deal(g: Game, card: DrawnCard, used: string[], isPass: boolean):
   }
 }
 
-export const reveal = (g: Game): Game =>
-  g.phase === 'card' && g.card && !g.card.revealed ? { ...g, card: { ...g.card, revealed: true } } : g
-
 /** Card answered → next player in seating order, or the next level. */
 export function done(g: Game): Game {
-  if (g.phase !== 'card' || !g.card?.revealed) return g
+  if (g.phase !== 'card' || !g.card) return g
   const target = g.card.target
   const players = g.players.map((p, i) => (i === target ? { ...p, askedAbout: p.askedAbout + 1 } : p))
   const next: Game = {
@@ -110,7 +107,7 @@ export function draw(g: Game, rolls: Rolls, exclude?: string): { card: DrawnCard
 
   return {
     used: [...used, prompt.id],
-    card: { key: g.draws + 1, prompt, wild, target, revealed: false },
+    card: { key: g.draws + 1, prompt, wild, target, redraw: exclude !== undefined },
   }
 }
 

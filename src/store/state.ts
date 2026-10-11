@@ -16,7 +16,8 @@ export interface DrawnCard {
   readonly prompt: Prompt
   readonly wild: boolean
   readonly target: number | null
-  readonly revealed: boolean
+  /** Dealt as a pass, replacing the card the player just turned down. */
+  readonly redraw: boolean
 }
 
 export interface Game {
@@ -89,7 +90,6 @@ export type Action =
   | { id: 'card/draw' }
   | { id: 'card/pass' }
   | { id: 'card/dealt'; data: { card: DrawnCard; used: string[]; isPass: boolean } }
-  | { id: 'card/reveal' }
   | { id: 'card/done' }
   // Menu
   | { id: 'menu/open' }

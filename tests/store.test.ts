@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { rootProcess } from '../src/store/processes'
 import { reducer } from '../src/store/reducer'
 import * as R from '../src/store/rules'
+import * as S from '../src/store/selectors'
 import { type Action, type Game, initialState, type State } from '../src/store/state'
 
 const reduce = (state: State, ...actions: Action[]) => actions.reduce((s, a) => reducer(s, a) ?? s, state)
@@ -22,7 +23,7 @@ describe('rules', () => {
       s = dealt(s, [0.9, 0, 0])
       asked.push(s.game!.card!.target)
       expect(s.game!.card!.target).not.toBe(s.game!.current)
-      s = reduce(s, { id: 'card/reveal' }, { id: 'card/done' })
+      s = reduce(s, { id: 'card/done' })
     }
     expect(new Set(asked).size).toBe(3)
   })
@@ -34,7 +35,7 @@ describe('rules', () => {
         let s = reduce(started(names, 'deep'), { id: 'level/begin' })
         for (let turn = 1; turn <= n * 3; turn++) {
           s = dealt(s, [0.9, Math.random(), Math.random()])
-          s = reduce(s, { id: 'card/reveal' }, { id: 'card/done' })
+          s = reduce(s, { id: 'card/done' })
           if (turn % n === 0) {
             const counts = s.game!.players.map((p) => p.askedAbout)
             expect(Math.max(...counts) - Math.min(...counts)).toBe(0)
@@ -48,15 +49,28 @@ describe('rules', () => {
     let s = reduce(started(['A', 'B']), { id: 'level/begin' })
     for (let level = 0; level < 3; level++) {
       expect(s.game!.level).toBe(level)
-      for (let t = 0; t < 2; t++) s = reduce(dealt(s), { id: 'card/reveal' }, { id: 'card/done' })
+      for (let t = 0; t < 2; t++) s = reduce(dealt(s), { id: 'card/done' })
       if (level < 2) s = reduce(s, { id: 'level/begin' })
     }
     expect(s.game!.phase).toBe('closing')
   })
 
-  it('ignores done before the card is revealed', () => {
-    const s = dealt(reduce(started(), { id: 'level/begin' }))
+  it('ignores done before a card is drawn', () => {
+    const s = reduce(started(), { id: 'level/begin' })
     expect(reduce(s, { id: 'card/done' })).toBe(s)
+  })
+
+  it('shows waiting-to-draw and the drawn card as one turn screen', () => {
+    const waiting = reduce(started(), { id: 'app/restored', data: { saved: null } }, { id: 'level/begin' })
+    const drawn = dealt(waiting)
+    expect(S.selectScreen(waiting)).toBe('turn')
+    expect(S.selectScreen(drawn)).toBe('turn')
+    expect(S.selectTurn(waiting)!.card).toBeNull()
+    expect(S.selectTurn(drawn)!.key).toBe(S.selectTurn(waiting)!.key)
+    const { card, used } = R.draw(drawn.game!, [0.9, 0.5, 0], drawn.game!.card!.prompt.id)
+    const passed = reduce(drawn, { id: 'card/dealt', data: { card, used, isPass: true } })
+    expect(S.selectTurn(passed)!.card!.redraw).toBe(true)
+    expect(S.selectTurn(passed)!.key).not.toBe(S.selectTurn(drawn)!.key)
   })
 
   it('validates names', () => {
@@ -92,7 +106,6 @@ describe('store processes', () => {
       await tick()
       const first = get().game!.card!
       expect(get().game!.phase).toBe('card')
-      put({ id: 'card/reveal' })
       put({ id: 'card/pass' })
       await tick()
       expect(get().game!.card!.prompt.id).not.toBe(first.prompt.id)

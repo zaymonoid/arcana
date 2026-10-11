@@ -41,8 +41,6 @@ function reduceGame(game: Game, action: Action): Game | undefined {
       return R.goDeeper(game)
     case 'card/dealt':
       return R.deal(game, action.data.card, action.data.used, action.data.isPass)
-    case 'card/reveal':
-      return R.reveal(game)
     case 'card/done':
       return R.done(game)
     case 'game/finished':
