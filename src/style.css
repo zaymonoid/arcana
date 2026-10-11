@@ -286,20 +286,35 @@ body {
 }
 
 /* The double rule framing each face. On the back it sits above the shaders, which run under it to the card's edge. */
-/* A solid band of gold flush with the card's edge, and a hairline inset within it. */
+/*
+ * A solid band of gold flush with the card's edge, and a hairline inset
+ * within it. The hairline's corners are concentric with the card's: its
+ * radius is the card's less its inset, so the gap stays even round the bend.
+ */
 .tarot-frame {
+  --radius: 0.9em;
+  --inset: 0.625em;
   position: absolute;
   inset: 0;
   border: 0.225em solid var(--color-gold-dim);
-  border-radius: inherit;
-  outline: 0.06em solid var(--color-gold-dim);
-  outline-offset: -0.625em;
+  border-radius: var(--radius);
   pointer-events: none;
+}
+
+.tarot-frame::after {
+  content: '';
+  position: absolute;
+  inset: calc(var(--inset) - 0.225em);
+  border: 0.06em solid var(--color-gold-dim);
+  border-radius: calc(var(--radius) - var(--inset));
 }
 
 .tarot-frame-back {
   border-color: var(--color-gold);
-  outline-color: rgb(212 177 95 / 0.55);
+}
+
+.tarot-frame-back::after {
+  border-color: rgb(212 177 95 / 0.55);
 }
 
 .deal-in {
