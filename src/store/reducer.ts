@@ -2,7 +2,7 @@ import type { Reducer } from '@zaymonoid/katha'
 import * as R from './rules'
 import type { Action, Game, SetupState, State } from './state'
 
-const closedUi = { menuOpen: false, confirmingEnd: false }
+const closedUi = { menuOpen: false, confirmingEnd: false, dump: null }
 
 const focusOn = (setup: SetupState, index: number): SetupState['focus'] => ({
   index,
@@ -88,7 +88,7 @@ export const reducer: Reducer<State, Action> = (state, action) => {
     }
 
     case 'menu/open':
-      return { ...state, ui: { menuOpen: true, confirmingEnd: false } }
+      return { ...state, ui: { ...closedUi, menuOpen: true } }
     case 'menu/close':
     case 'menu/end-cancel':
       return { ...state, ui: action.id === 'menu/close' ? closedUi : { ...state.ui, confirmingEnd: false } }
@@ -96,6 +96,13 @@ export const reducer: Reducer<State, Action> = (state, action) => {
       return { ...state, ui: { ...state.ui, confirmingEnd: true } }
     case 'menu/end-confirm':
       return { ...state, game: null, history: [], ui: closedUi }
+
+    case 'debug/dumped':
+      return { ...state, ui: { ...state.ui, dump: { text: action.data.text, copied: null } } }
+    case 'debug/copied':
+      return state.ui.dump ? { ...state, ui: { ...state.ui, dump: { ...state.ui.dump, copied: action.data.ok } } } : undefined
+    case 'debug/close':
+      return { ...state, ui: { ...state.ui, dump: null } }
   }
 
   const setup = reduceSetup(state.setup, action)

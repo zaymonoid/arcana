@@ -233,7 +233,21 @@ export class ArcanaApp extends LitElement {
           class="fade-in w-full max-w-md rounded-t-3xl border-t border-gold/40 bg-ink-2 px-6 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
           @click=${(e: Event) => e.stopPropagation()}
         >
-          ${h.confirmingEnd
+          ${h.dump
+            ? html`
+                <h3 class="mb-3 font-sans text-xs font-bold tracking-[0.22em] text-gold/80 uppercase">Debug dump</h3>
+                <textarea
+                  class="mb-4 h-64 w-full resize-none rounded-xl border border-gold/30 bg-ink/60 p-3 font-mono text-xs text-parchment/80"
+                  readonly
+                  .value=${h.dump.text}
+                  @focus=${(e: Event) => (e.target as HTMLTextAreaElement).select()}
+                ></textarea>
+                <div class="grid gap-3">
+                  <button class=${btnGold} @click=${() => put({ id: 'debug/copy' })}>${h.dump.copyLabel}</button>
+                  <button class="py-2 font-sans text-parchment/60" @click=${() => put({ id: 'debug/close' })}>Back</button>
+                </div>
+              `
+            : h.confirmingEnd
             ? html`
                 <p class="mb-6 text-center font-sans text-xl">End this reading? Progress will be lost.</p>
                 <div class="grid gap-3">
@@ -256,6 +270,7 @@ export class ArcanaApp extends LitElement {
                 <div class="grid gap-3">
                   <button class=${btnGold} @click=${() => put({ id: 'level/skip' })}>${h.deeperLabel}</button>
                   <button class=${btnGhost} @click=${() => put({ id: 'menu/end-request' })}>End game</button>
+                  <button class="py-1 font-sans text-sm text-parchment/40" @click=${() => put({ id: 'debug/dump' })}>Dump game (debug)</button>
                   <button class="py-2 font-sans text-parchment/60" @click=${() => put({ id: 'menu/close' })}>Close</button>
                 </div>
               `}

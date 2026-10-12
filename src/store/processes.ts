@@ -5,6 +5,7 @@
 import { combinators, type Process } from '@zaymonoid/katha'
 import { Clock, Effect, Random, Stream, SubscriptionRef } from 'effect'
 import * as R from './rules'
+import { selectDebugDump } from './selectors'
 import type { Action, Game, State } from './state'
 
 const { takeLeading } = combinators<State, Action>()
@@ -67,13 +68,47 @@ const passCard = takeLeading(['card/pass'], (_, ctx) =>
   }),
 )
 
+// ---------- Debug ----------
+
+const environment = Effect.sync(() =>
+  typeof window === 'undefined'
+    ? null
+    : {
+        userAgent: navigator.userAgent,
+        viewport: `${window.innerWidth}x${window.innerHeight}@${window.devicePixelRatio}`,
+        url: location.href,
+      },
+)
+
+const dump = takeLeading(['debug/dump'], (_, ctx) =>
+  Effect.gen(function* () {
+    const dump = selectDebugDump(yield* ctx.select())
+    const at = new Date(yield* Clock.currentTimeMillis).toISOString()
+    const text = JSON.stringify({ at, env: yield* environment, ...dump }, null, 2)
+    yield* ctx.put({ id: 'debug/dumped', data: { text } })
+  }),
+)
+
+const copyDump = takeLeading(['debug/copy'], (_, ctx) =>
+  Effect.gen(function* () {
+    const text = (yield* ctx.select()).ui.dump?.text
+    if (!text) return
+    const ok = yield* Effect.tryPromise(() => navigator.clipboard.writeText(text)).pipe(
+      Effect.as(true),
+      Effect.orElseSucceed(() => false),
+    )
+    yield* ctx.put({ id: 'debug/copied', data: { ok } })
+  }),
+)
+
 // ---------- Persistence ----------
 
 const load = Effect.sync((): Game | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     const game = raw ? (JSON.parse(raw) as Game) : null
-    return game && game.phase !== 'summary' ? game : null
+    // Games saved before the draw log existed start with an empty one.
+    return game && game.phase !== 'summary' ? { ...game, log: game.log ?? [] } : null
   } catch {
     return null
   }
@@ -109,5 +144,7 @@ export const rootProcess: Process<State, Action> = (ctx) =>
     yield* finish(ctx)
     yield* drawCard(ctx)
     yield* passCard(ctx)
+    yield* dump(ctx)
+    yield* copyDump(ctx)
     yield* persistence(ctx)
   })

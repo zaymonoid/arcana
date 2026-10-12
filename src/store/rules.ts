@@ -4,7 +4,7 @@
  * processes supply those, the reducer calls these.
  */
 import { DECK, LEVELS, OBLIQUES, type Prompt, WILDCARDS } from '../deck'
-import type { DrawnCard, Game, Length, Suit } from './state'
+import type { DrawnCard, Game, Length, LogEntry, Suit } from './state'
 
 /** Rounds per level — a round is everyone taking one turn. */
 export const ROUNDS: Record<Length, number> = { quick: 1, standard: 2, deep: 3 }
@@ -34,6 +34,7 @@ export function newGame(names: readonly string[], length: Length, startedAt: num
     draws: 0,
     answered: 0,
     passed: 0,
+    log: [],
     startedAt,
   }
 }
@@ -61,7 +62,14 @@ export function deal(g: Game, card: DrawnCard, used: string[], isPass: boolean):
     used,
     draws: g.draws + 1,
     passed: g.passed + (isPass ? 1 : 0),
+    log: [...settle(g.log, 'passed'), { level: g.level, drawer: g.current, card, outcome: null }],
   }
+}
+
+/** Record how the card on the table left it. */
+function settle(log: readonly LogEntry[], outcome: NonNullable<LogEntry['outcome']>): readonly LogEntry[] {
+  const last = log.at(-1)
+  return last && last.outcome === null ? [...log.slice(0, -1), { ...last, outcome }] : log
 }
 
 /**
@@ -87,6 +95,7 @@ export function done(g: Game): Game {
     ...g,
     players,
     card: null,
+    log: settle(g.log, 'answered'),
     answered: g.answered + 1,
     turnsInLevel: g.turnsInLevel + 1,
     current: (g.current + 1) % g.players.length,
@@ -99,7 +108,7 @@ export function done(g: Game): Game {
 export function goDeeper(g: Game): Game {
   if (g.phase === 'closing' || g.phase === 'summary') return g
   const level = g.level + 1
-  const base = { ...g, card: null, turnsInLevel: 0 }
+  const base = { ...g, card: null, turnsInLevel: 0, log: g.card ? settle(g.log, 'skipped') : g.log }
   if (level >= LEVELS.length) return { ...base, phase: 'closing' }
   return { ...base, level, phase: 'level' }
 }
