@@ -12,6 +12,8 @@ import './components/iridescent-shimmer'
 
 const DESIGNS: { id: SigilDesign; name: string }[] = [
   { id: 'star', name: 'Star (current)' },
+  { id: 'deep', name: 'Deep Water' },
+  { id: 'veil', name: 'Veil' },
   { id: 'water', name: 'Still Water' },
   { id: 'moons', name: 'Lunar Wheel' },
   { id: 'mirror', name: 'Scrying Mirror' },
@@ -29,7 +31,7 @@ class SigilLab extends LitElement {
 
   constructor() {
     super()
-    this.design = (params.get('d') as SigilDesign) || 'water'
+    this.design = (params.get('d') as SigilDesign) || 'deep'
     const n = Number(params.get('n')) || 3
     this.seeds = params.get('seeds')?.split(',').map(Number) ?? Array.from({ length: n }, Math.random)
   }

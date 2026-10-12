@@ -328,7 +328,7 @@ float star(vec2 uv, float t, float br) {
   return d;
 }
 
-// ---- Reflection concepts (iteration) ----
+// ---- Revelation concepts (iteration) ----
 
 // The lit part of a moon of radius r, at phase k: 0 new, 0.5 full, 1 new
 // again; it waxes from the right.
@@ -560,6 +560,130 @@ float threads(vec2 uv, float t, float br) {
   return d;
 }
 
+// Deep Water: the surface high on the card under a thin moon. Now and then a
+// drop falls through it, rings spreading, and sinks slowly through shafts of
+// light to a shell far below that opens on a glowing pearl.
+float deep(vec2 uv, float t, float br) {
+  float s = mix(0.14, 0.17, rnd(80.0));
+  float y = uv.y - s - 0.003 * sin(uv.x * 40.0 + t * 0.8);
+  float d = sdTaper(vec2(abs(uv.x), y), vec2(0.0), vec2(0.2, 0.0), 0.0025 * LINE, 0.0005);
+
+  // A thin moon above.
+  vec2 mc = vec2(mix(-0.06, 0.06, rnd(81.0)), s + mix(0.06, 0.08, rnd(82.0)));
+  float mr = 0.022;
+  float k = mix(0.1, 0.18, rnd(83.0));
+  d = min(d, abs(moonLit(uv - mc, mr, k)) - 0.0025 * LINE);
+  d = min(d, abs(length(uv - mc) - mr) - 0.001 * LINE + 0.0012);
+
+  // Shafts of light slanting down from the surface, swaying, fading with depth.
+  vec2 c = vec2(0.0, -mix(0.15, 0.18, rnd(84.0)));
+  for (int i = 0; i < 5; i++) {
+    float fi = float(i) - 2.0;
+    vec2 a = vec2(fi * 0.045 + 0.01 * sin(t * 0.2 + fi), s - 0.01);
+    vec2 b = vec2(c.x + fi * 0.012, c.y + 0.07);
+    float shaft = sdTaper(uv, a, b, 0.0022 * LINE, 0.0);
+    d = min(d, shaft + 0.0015 + 0.0015 * (0.5 + 0.5 * sin(t * 0.5 + fi * 1.7)));
+  }
+
+  // The drop: falls, rings spread, and it sinks with a trail of bubbles.
+  float period = 9.0;
+  float cyc = fract(t / period + rnd(85.0));
+  float lx = mix(-0.04, 0.04, rnd(86.0));
+  if (cyc < 0.12) {
+    float fy = mix(0.3, s, pow(cyc / 0.12, 2.0));
+    d = min(d, sdLens(vec2(uv.y - fy, uv.x - lx), 0.007, 0.0045));
+  } else {
+    float sink = (cyc - 0.12) / 0.88;
+    float dy = mix(s - 0.012, c.y + 0.05, 1.0 - pow(1.0 - sink, 2.0));
+    vec2 dp = vec2(mix(lx, c.x, sink) + 0.004 * sin(t * 1.3), dy);
+    d = min(d, length(uv - dp) - 0.0035 + 0.003 * smoothstep(0.85, 1.0, sink));
+    for (int i = 0; i < 4; i++) {
+      float fi = float(i);
+      float rise = fract(t * 0.25 + fi * 0.25);
+      vec2 bp = dp + vec2(0.006 * sin(t * 2.0 + fi * 2.0), rise * 0.06);
+      d = min(d, abs(length(uv - bp) - 0.0025 * (1.0 - rise)) - 0.0008 + rise * 0.002);
+    }
+    for (int i = 0; i < 3; i++) {
+      float age = cyc - 0.12 - float(i) * 0.06;
+      if (age > 0.0 && age < 0.5) {
+        vec2 rp = vec2(uv.x - lx, (uv.y - s) * 3.5);
+        d = min(d, abs(length(rp) - age * 0.35) - 0.0016 * LINE + age * 0.014);
+      }
+    }
+  }
+
+  // The shell: a deep fluted bowl, and a lid hinged on the left that lifts
+  // and settles again.
+  float sr = mix(0.04, 0.048, rnd(87.0));
+  float open = 0.7 * smoothstep(-0.3, 0.6, sin(t * 0.22 + rnd(88.0) * 6.283));
+  vec2 p = uv - c;
+  float pa = atan(p.x, -p.y);
+  float flute = 0.0025 * cos(pa * 11.0);
+  float bowl = max(abs(length(p) - sr - flute) - 0.0025 * LINE, p.y);
+  bowl = min(bowl, sdLine(p, vec2(-sr, 0.0), vec2(sr, 0.0), 0.0015 * LINE));
+  vec2 h = vec2(-sr, 0.0);
+  vec2 q = rot(open) * (p - h) + h;
+  float lid = max(abs(length(q * vec2(1.0, 2.2)) - sr) / 2.2 - 0.0022 * LINE, -q.y);
+  d = min(d, min(bowl, lid));
+  // Ribs on the bowl, running in to the hinge of its curve.
+  float rib = max(abs(fold(rot(-PI * 0.5) * p, 11.0).y) - 0.0007, max(length(p) - sr, sr * 0.55 - length(p)));
+  d = min(d, max(rib, p.y) + 0.001);
+  // The pearl lifts a little as the lid opens, glowing brighter, its light
+  // spreading in rings.
+  vec2 pp = p - vec2(0.0, 0.006 + 0.012 * open);
+  d = min(d, length(pp) - 0.008 - 0.004 * open);
+  for (int i = 0; i < 3; i++) {
+    float f = fract(t * 0.12 + float(i) / 3.0);
+    d = min(d, abs(length(pp) - 0.014 - 0.06 * f) - 0.001 * LINE + 0.003 * f + 0.005 * (1.0 - open));
+  }
+  return d;
+}
+
+// Veil: stage curtains, joined at the top and swept aside to tie-backs, that
+// draw open and fall closed again slowly on a small candle flame.
+float veil(vec2 uv, float t, float br) {
+  float yt = -mix(0.06, 0.1, rnd(90.0));
+  float open = mix(0.035, 0.1, 0.5 + 0.5 * sin(t * 0.18 + rnd(91.0) * 6.283));
+  float folds = 3.0 + floor(rnd(92.0) * 2.0);
+  float sp = mix(0.022, 0.03, rnd(93.0));
+  float side = sign(uv.x + 1e-5);
+  float x = abs(uv.x), y = uv.y;
+  // The parting widens from the top down to the tie-backs, then hangs straight.
+  float top = 0.255;
+  float u = clamp((top - y) / (top - yt), 0.0, 1.0);
+  float gap = open * (y > yt ? pow(u, 1.4) : 1.0 + 0.4 * (yt - y));
+  // Folds gather at the tie-backs and spread above and below.
+  float gather = 0.35 + 0.65 * smoothstep(0.0, 0.12, abs(y - yt));
+  float d = 1e9;
+  for (int i = 0; i < 5; i++) {
+    float fi = float(i);
+    if (fi >= folds) break;
+    float fx = 0.003 + gap + fi * sp * gather * (1.0 + 0.2 * cos(y * 9.0 + fi)) + 0.003 * sin(y * 22.0 + t * 0.7 + fi * 1.3 + side) * u;
+    d = min(d, abs(x - fx) * 0.9 - (fi < 0.5 ? 0.0025 : 0.0015) * LINE);
+  }
+  // A tie-back knot on each side.
+  vec2 kp = vec2(x - 0.003 - open - (folds - 1.0) * sp * 0.35 * 0.5, y - yt);
+  d = min(d, length(kp) - 0.005);
+  d = min(d, sdLine(kp, vec2(0.0), vec2(0.006, -0.03), 0.0015 * LINE));
+  // A scalloped valance along the top.
+  vec2 vp = vec2(mod(uv.x + 0.02, 0.04) - 0.02, uv.y - 0.262);
+  d = min(d, sdArc(rot(-PI * 0.5) * vp, 0.02, 1.2, 0.0018 * LINE));
+
+  // The flame: a teardrop that leans and flickers, its wick and a soft halo,
+  // shown more as the curtains part.
+  vec2 f = (uv - vec2(0.0, yt + 0.03)) / 1.5;
+  float flick = 0.003 * sin(t * 3.1) + 0.002 * sin(t * 4.7 + 1.0);
+  float body = smin(length(f) - 0.011, sdTaper(f, vec2(0.0), vec2(flick, 0.04 + 0.004 * sin(t * 2.3)), 0.009, 0.0), 0.01);
+  float g = abs(body) - 0.002 * LINE;
+  g = min(g, length(f - vec2(0.0, 0.004)) - 0.004);
+  g = min(g, sdLine(f, vec2(0.0, -0.02), vec2(0.0, -0.011), 0.0012 * LINE));
+  float halo = abs(length(f - vec2(0.0, 0.01)) - 0.035 - 0.004 * sin(t * 0.8)) - 0.001 * LINE;
+  g = min(g, halo + 0.002);
+  float shown = smoothstep(0.035, 0.08, open);
+  d = min(d, g * 1.5 + 0.003 * (1.0 - shown));
+  return d;
+}
+
 void main() {
   // Centred coordinates scaled to the frame's width: SIZE > 1 lets the sigil
   // run off the edges so it fills the frame rather than fits it.
@@ -590,9 +714,15 @@ void main() {
   } else if (uVariant < 5.5) {
     d = mirror(uv, t, br);
     tint = vec3(0.76, 0.72, 0.92); // glass violet
-  } else {
+  } else if (uVariant < 6.5) {
     d = threads(uv, t, br);
     tint = vec3(0.68, 0.76, 0.92); // starlight
+  } else if (uVariant < 7.5) {
+    d = deep(uv, t, br);
+    tint = vec3(0.6, 0.78, 0.9); // deep water
+  } else {
+    d = veil(uv, t, br);
+    tint = vec3(0.9, 0.72, 0.6); // candlelight
   }
   // A whisper of warmth or coolness, so the metal reads slightly differently
   // each card; some are engraved finer or heavier, some glow more softly.
@@ -615,9 +745,9 @@ void main() {
 }
 `
 
-/** The levels' sigils, then Reflection concepts under trial in the sigil lab. */
-export type SigilDesign = Sigil | 'water' | 'moons' | 'mirror' | 'threads'
-const VARIANTS: SigilDesign[] = ['fool', 'lovers', 'star', 'water', 'moons', 'mirror', 'threads']
+/** The levels' sigils, then Revelation concepts under trial in the sigil lab. */
+export type SigilDesign = Sigil | 'water' | 'moons' | 'mirror' | 'threads' | 'deep' | 'veil'
+const VARIANTS: SigilDesign[] = ['fool', 'lovers', 'star', 'water', 'moons', 'mirror', 'threads', 'deep', 'veil']
 
 export class CardSigil extends ShaderCanvas {
   static properties = { ...ShaderCanvas.properties, sigil: { type: String } }
