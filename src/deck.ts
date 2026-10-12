@@ -45,8 +45,8 @@ export const LEVELS: (Arcanum & { sigil: Sigil })[] = [
     numeral: 'XVII',
     title: 'The Star',
     sigil: 'star',
-    theme: 'Reflection',
-    blurb: 'Look back at tonight and at each other. Say what you noticed.',
+    theme: 'Revelation',
+    blurb: 'The deepest water. Say what you rarely say out loud, and hold what you are given with care.',
   },
 ]
 
@@ -168,34 +168,57 @@ const connection = [
 ]),
 ]
 
-const reflection = [
-  ...mk('III', 'ask', [
-    "What's something you've learned about {name} tonight?",
-    'What did {name} say tonight that surprised you?',
-    "What do you think {name}'s greatest strength is?",
-    'What should {name} give themselves more credit for?',
-    'If you could give {name} one piece of encouragement, what would it be?',
-    "What's one thing about {name} you hope never changes?",
-    'What do you think {name} is about to grow into?',
-    'Which of your first impressions of {name} was wrong?',
-    "What would you thank {name} for, if it didn't feel awkward?",
-    "What's a question you'd still like {name} to answer?",
-    'What do you admire about how {name} answered tonight?',
-    'What does {name} bring to this group that nobody else does?',
-  ]),
+const revelation = [
   ...mk('III', 'self', [
-    'Which of your answers tonight do you want to expand on?',
-    "What's something you've been holding back tonight?",
+    "What's something you've never fully forgiven yourself for?",
+    'When have you felt most alone, and what got you through it?',
+    'What do you think you will regret most if nothing changes?',
+    'What did you lose that shaped who you are now?',
+    "Who do you owe an apology you haven't given?",
+    "What part of your parents do you see in yourself that you didn't choose?",
+    'What are you afraid people would think if they really knew you?',
+    'How has what you need from love changed since you were younger?',
+    'When did you last cry, and what was underneath it?',
+    "What's a version of your life you quietly mourn?",
+    'What do you want the people closest to you to remember you for?',
+    "What's the hardest thing you've ever had to accept?",
+    'Which relationship in your life do you most wish were different?',
+    "What are you still carrying that you'd like to put down?",
+    'When were you at your worst, and what did it teach you?',
+    'What do you find hard to ask for, even from people who love you?',
+    'What do you believe happens when we die — and does it comfort you?',
+    'When did you realise you were no longer a child?',
+    "If you could have one more conversation with someone you've lost, what would you say?",
+    "What story do you tell yourself about why something hasn't worked out?",
+    'Where in your life are you settling?',
+    'What would your younger self be most disappointed by, and most proud of?',
+    "What do you need to hear from someone that you've never heard?",
+    'What scares you about the next ten years?',
+    'What part of yourself do you hide, even from close friends?',
+    'When did you last feel truly understood, and by whom?',
+    "What do you wish you could say to your parents but haven't?",
+    "What's a promise to yourself you keep breaking?",
+    'What makes you feel hard to love, on the bad days?',
+    'What would you do differently if you knew you had five years left?',
     'Who here reminds you of someone important in your life, and why?',
-    'What has this conversation made you think about?',
-    'What do you hope this group remembers about you?',
-    'What promise do you want to make to yourself after tonight?',
-    'Which question tonight was hardest for you, and why?',
-    'What do you want to say to the group before we finish?',
+  ]),
+  ...mk('III', 'ask', [
+    "Tell {name} something you admire about them that you've never said out loud.",
+    "Ask {name}: what's the hardest thing you're dealing with right now that most people don't know about?",
+    'Tell {name} what you think they are more capable of than they believe.',
+    'Ask {name}: what do you need from the people in this room?',
+    "Tell {name} what you think they carry that they don't talk about. They may confirm, deny or stay silent.",
+    "Ask {name}: what's something you're afraid to want?",
+    'Ask {name} who they would call at 3am, and why that person.',
+    'Tell {name} what you hope for them in the next year.',
+    'Ask {name}: what part of your life feels unfinished?',
+    'Ask {name}: what would you change about how you were loved as a child?',
+    'What do you think {name} is about to grow into? Tell them.',
+    "Ask {name}: when did you last feel proud of who you are, not what you've done?",
   ]),
 ]
 
-export const DECK: Prompt[][] = [perception, connection, reflection]
+export const DECK: Prompt[][] = [perception, connection, revelation]
 
 export const WILDCARDS: Prompt[] = [
   ...mk('W', 'group', [
@@ -226,15 +249,16 @@ export const WILDCARDS: Prompt[] = [
 
 /**
  * Oblique cards, loosely after Oblique Strategies: a sideways instruction
- * rather than a question. Rare, and only once the group has warmed up.
+ * rather than a question. Rare, and only once the group has warmed up
+ * (The Lovers onward).
  */
 export const OBLIQUES: Prompt[] = [
   ...mk('O', 'self', [
-    'Answer a question you have already heard tonight — as the person you were ten years ago.',
+    'Describe the person you were ten years ago as if they were a stranger you once met.',
     'Describe your week as weather.',
     'Take the quality you like least in yourself. Where has it served you well?',
     'Treat a mistake you made this year as a hidden intention. What were you really trying to do?',
-    'Name the question tonight you were relieved not to be asked. Answer it, or say why not.',
+    'Name a question you hope nobody ever asks you. Answer it, or say why not.',
     'Describe what you want without naming it. Give its outline, its weight, its colour.',
     'Give yourself the advice you would never give anyone else.',
     'Pick an ordinary object within reach. Let it explain your current state of mind.',
@@ -243,22 +267,21 @@ export const OBLIQUES: Prompt[] = [
     'What are you good at that you would rather not be needed for?',
     'Tell a story you usually tell well — from the embarrassing angle.',
     'Take a strong opinion you hold. Argue the other side as if you meant it.',
-      'Answer the next question as the person on your right thinks you would.',
+    'Describe the place you grew up through one smell, one sound and one rule.',
     'Describe your current problem as a recipe.',
     "Say what you're avoiding, in the form of a weather forecast.",
     "Name something you've been calling a preference that is actually a fear.",
 ]),
   ...mk('O', 'ask', [
     'Tell the group how {name} would describe you. Then {name} corrects the record.',
-    'Say what you think {name} has been leaving unsaid tonight. They may confirm, deny or stay silent.',
+    'Say what you think {name} finds hardest to say out loud. They may confirm, deny or stay silent.',
     'Ask {name} the question you would want to be asked if you were them.',
     'Reverse: {name} asks you a question. You may only answer with a story.',
     'Reverse: {name} tells you what they think you need to hear right now.',
   ]),
   ...mk('O', 'group', [
     'One minute of silence, timed. Then everyone says one word about what it was like.',
-    'Everyone finishes the sentence: “The thing nobody here has said yet is…”',
-    'Go around: repeat back something someone else said tonight, in your own words, until they say “yes, that’s it”.',
-    'Decide together what this group is circling but has not asked. Then answer it together.',
+    'Go around: name one person, not here, who made you who you are — and something you never thanked them for.',
+    'Go around: say one thing you are quietly afraid of. No discussion until everyone has spoken.',
   ]),
 ]

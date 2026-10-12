@@ -19,7 +19,7 @@ Built with [Lit](https://lit.dev), [Tailwind CSS v4](https://tailwindcss.com) an
    - Tapping the card (or anywhere around it) is how the whole game moves on: it also begins each level and finishes the reading. The **↶** button in the top left undoes an accidental tap.
 3. **Passes:** each player has 3 passes for the whole game. A pass deals a replacement card, already turned over.
 4. **Targets:** nobody answers their own draw. Cards that name another player, and questions about "you", pick who they're for by fair rotation: whoever has been asked about least, and never the person holding the phone. The drawer reads the card to them.
-5. **Wildcards:** about 1 card in 8 is a *Wheel of Fortune* card that everyone plays.
+5. **Wildcards:** in level 1 only, about 1 card in 8 is a *Wheel of Fortune* card that everyone plays.
 6. **Oblique cards:** from level 2 onward, about 1 card in 12 is a *Hanged Man* card: a sideways instruction rather than a question, loosely after Oblique Strategies.
 7. **Three levels:**
 
@@ -27,7 +27,7 @@ Built with [Lit](https://lit.dev), [Tailwind CSS v4](https://tailwindcss.com) an
    |---|---|---|
    | 1 | 0 · The Fool | **Perception**: guess about someone, then they reveal the truth |
    | 2 | VI · The Lovers | **Connection**: read a question to someone, who answers honestly |
-   | 3 | XVII · The Star | **Reflection**: on tonight and each other |
+   | 3 | XVII · The Star | **Revelation**: the deepest questions: loss, regret, love, what goes unsaid |
 
    A level ends after its set number of rounds. The **⋯ → Go deeper** menu option moves on early.
 8. **Ending:** a closing card (*The Sun*), then a summary (*The World*).
