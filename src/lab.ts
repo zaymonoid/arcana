@@ -16,6 +16,10 @@ const DESIGNS: { id: SigilDesign; name: string }[] = [
   { id: 'veil', name: 'Veil' },
   { id: 'water', name: 'Still Water' },
   { id: 'moons', name: 'Lunar Wheel' },
+  { id: 'orrery', name: 'Orrery' },
+  { id: 'eclipse', name: 'Eclipse' },
+  { id: 'spiral', name: 'Spiral' },
+  { id: 'tide', name: 'Tide' },
   { id: 'mirror', name: 'Scrying Mirror' },
   { id: 'threads', name: 'Constellation' },
   { id: 'fool', name: 'Fool' },
@@ -31,7 +35,7 @@ class SigilLab extends LitElement {
 
   constructor() {
     super()
-    this.design = (params.get('d') as SigilDesign) || 'deep'
+    this.design = (params.get('d') as SigilDesign) || 'moons'
     const n = Number(params.get('n')) || 3
     this.seeds = params.get('seeds')?.split(',').map(Number) ?? Array.from({ length: n }, Math.random)
   }

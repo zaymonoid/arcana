@@ -684,6 +684,196 @@ float veil(vec2 uv, float t, float br) {
   return d;
 }
 
+// ---- Lunar Wheel variants ----
+
+// A ring of n moons of radius mr on an orbit of radius R, turning at spin,
+// their phases running round the ring from k0. Returns the field, and the
+// distance to the nearest moon's centre in near.
+float moonRing(vec2 uv, float t, float n, float R, float mr, float spin, float k0, out float near) {
+  float d = 1e9;
+  near = 1e9;
+  for (int i = 0; i < 12; i++) {
+    if (float(i) >= n) break;
+    float a = float(i) / n * 2.0 * PI + t * spin;
+    vec2 p = uv - R * vec2(cos(a), sin(a));
+    near = min(near, length(p));
+    float k = fract(float(i) / n + k0);
+    d = min(d, moonLit(p, mr, k));
+    d = min(d, abs(length(p) - mr) - 0.0012 * LINE + 0.001);
+  }
+  return d;
+}
+
+// The orbit line under a ring of moons, broken where it would cross them.
+float orbit(float r, float R, float near, float mr) {
+  return max(abs(r - R) - 0.0012 * LINE, mr * 1.6 - near);
+}
+
+// Orrery: two rings of moons on nested orbits turning opposite ways, the
+// inner one tilted into an ellipse, around a heart moon on a fine axis.
+float orrery(vec2 uv, float t, float br) {
+  float n1 = 8.0 + 2.0 * floor(rnd(100.0) * 2.0);
+  float n2 = 4.0 + floor(rnd(101.0) * 2.0);
+  float dir = rnd(102.0) < 0.5 ? -1.0 : 1.0;
+  float R1 = mix(0.15, 0.16, rnd(103.0)) * br;
+  float R2 = mix(0.085, 0.095, rnd(104.0)) * br;
+  float r = length(uv);
+  float near;
+  float d = moonRing(uv, t, n1, R1, 0.013, dir * 0.02, rnd(105.0), near);
+  d = min(d, orbit(r, R1, near, 0.013));
+
+  // The inner orbit is an ellipse seen at a tilt, carrying bigger moons.
+  float tilt = (rnd(106.0) - 0.5) * 0.8;
+  vec2 e = rot(tilt) * uv;
+  vec2 q = vec2(e.x, e.y / 0.62);
+  float near2 = 1e9;
+  for (int i = 0; i < 5; i++) {
+    if (float(i) >= n2) break;
+    float a = float(i) / n2 * 2.0 * PI - t * dir * 0.045;
+    vec2 p = uv - rot(-tilt) * (R2 * vec2(cos(a), 0.62 * sin(a)));
+    near2 = min(near2, length(p));
+    d = min(d, moonLit(p, 0.02, fract(float(i) / n2 + rnd(107.0) + 0.25)));
+    d = min(d, abs(length(p) - 0.02) - 0.0012 * LINE + 0.001);
+  }
+  d = min(d, max(abs(length(q) - R2) * 0.62 - 0.0012 * LINE, 0.032 - near2));
+
+  // The heart: a moon with a hairline axis through it and a hub.
+  float big = mix(0.03, 0.036, rnd(108.0)) * br;
+  float hk = mix(0.08, 0.92, fract(t * 0.008 + rnd(109.0)));
+  d = min(d, abs(moonLit(rot(tilt) * uv, big, hk)) - 0.0028 * LINE);
+  d = min(d, abs(r - big) - 0.0012 * LINE + 0.001);
+  d = min(d, max(abs(e.x) - 0.0008 * LINE, abs(e.y) - R2 * 0.62 - 0.012));
+  d = min(d, length(e - vec2(0.0, R2 * 0.62 + 0.012)) - 0.003);
+  d = min(d, length(e + vec2(0.0, R2 * 0.62 + 0.012)) - 0.003);
+
+  // Ticks round the rim and arcs beyond.
+  vec2 tp = fold(rot(t * dir * 0.01) * uv, 2.0 * n1);
+  d = min(d, sdLine(tp, vec2(R1 + 0.028, 0.0), vec2(R1 + 0.038, 0.0), 0.0015 * LINE));
+  d = smin(d, arcs(uv, -t, n2, R1 + 0.065, 0.04, 0.6), K * 0.6);
+  return d;
+}
+
+// Eclipse: a sun of rays at the heart that a moon crosses slowly, the wheel
+// of phases around it and a thin corona that swells as the disc is covered.
+float eclipse(vec2 uv, float t, float br) {
+  float n = 6.0 + 2.0 * floor(rnd(110.0) * 2.0);
+  float spin = (rnd(111.0) < 0.5 ? -1.0 : 1.0) * 0.025;
+  float R = mix(0.125, 0.135, rnd(112.0)) * br;
+  float mr = mix(0.015, 0.019, rnd(113.0));
+  float r = length(uv), ang = atan(uv.y, uv.x);
+  float near;
+  float d = moonRing(uv, t, n, R, mr, spin, rnd(114.0), near);
+  d = min(d, orbit(r, R, near, mr));
+
+  // The sun: a disc and a fan of short and long rays.
+  float sr = mix(0.04, 0.046, rnd(115.0)) * br;
+  float sun = r - sr;
+  float rays = 12.0 + 4.0 * floor(rnd(116.0) * 2.0);
+  vec2 fp = fold(rot(t * 0.02) * uv, rays);
+  sun = min(sun, sdTaper(fp, vec2(sr + 0.008, 0.0), vec2(sr + 0.03, 0.0), 0.002 * LINE, 0.0));
+  vec2 hp = fold(rot(t * 0.02 + PI / rays) * uv, rays);
+  sun = min(sun, sdTaper(hp, vec2(sr + 0.008, 0.0), vec2(sr + 0.018, 0.0), 0.0015 * LINE, 0.0));
+
+  // The moon crosses the disc and back on a long slow swing.
+  float cross = sin(t * 0.08 + rnd(117.0) * 6.283);
+  vec2 mp = uv - rot((rnd(118.0) - 0.5) * 1.2) * vec2(cross * sr * 1.6, 0.0);
+  float moon = length(mp) - sr * 0.94;
+  // The dark disc hides what it covers; its own rim stays fine.
+  // The corona: a soft ring that brightens as the cover nears total.
+  float total = 1.0 - smoothstep(0.0, 0.5, abs(cross));
+  sun = min(sun, abs(r - sr * 1.3 - 0.004 * sin(ang * 7.0 + t * 0.6)) - 0.001 * LINE + 0.006 * (1.0 - total));
+  d = min(d, max(sun, -moon));
+  d = min(d, abs(moon) - 0.0015 * LINE);
+
+  float ticks = 4.0 * n;
+  vec2 tp = fold(rot(t * spin * 0.5) * uv, ticks);
+  d = min(d, sdLine(tp, vec2(R + mr * 2.2, 0.0), vec2(R + mr * 2.2 + 0.012, 0.0), 0.0015 * LINE));
+  d = smin(d, arcs(uv, -t, n, R + mr * 2.2 + 0.03, 0.04, 0.6), K * 0.6);
+  return d;
+}
+
+// Spiral: moons winding in from a full one at the rim to a dark one at the
+// heart, waning as they go, the whole spiral turning slowly.
+float spiral(vec2 uv, float t, float br) {
+  float n = 10.0 + 2.0 * floor(rnd(120.0) * 2.0);
+  float turns = mix(1.5, 1.9, rnd(121.0));
+  float dir = rnd(122.0) < 0.5 ? -1.0 : 1.0;
+  float R0 = mix(0.17, 0.185, rnd(123.0)) * br, R1 = 0.03;
+  float r = length(uv);
+  vec2 p = rot(t * dir * 0.015) * uv;
+  float d = 1e9;
+  for (int i = 0; i < 12; i++) {
+    if (float(i) >= n) break;
+    float f = float(i) / (n - 1.0);
+    float a = f * turns * 2.0 * PI;
+    float rad = mix(R0, R1, pow(f, 0.85));
+    vec2 c = rad * vec2(cos(a), sin(a));
+    float mr = mix(0.017, 0.007, f);
+    // Full at the rim, new at the heart, with a nudge from the card's seed.
+    float k = mix(0.5, 0.98, f);
+    d = min(d, moonLit(p - c, mr, k));
+    d = min(d, abs(length(p - c) - mr) - 0.0012 * LINE + 0.001);
+  }
+  // The spiral line itself, hairline, drawn under the moons.
+  float sa = atan(p.y, p.x);
+  float line = 1e9;
+  for (int j = -1; j <= 2; j++) {
+    float aa = sa + float(j) * 2.0 * PI;
+    float f = aa / (turns * 2.0 * PI);
+    if (f < 0.0 || f > 1.0) continue;
+    float rad = mix(R0, R1, pow(f, 0.85));
+    line = min(line, abs(r - rad));
+  }
+  d = min(d, line - 0.001 * LINE + 0.0008);
+  // The dark heart: a fine ring, and a drifting ring of dust round the whole.
+  d = min(d, abs(r - 0.012) - 0.0012 * LINE);
+  d = min(d, length(uv) - 0.003);
+  d = min(d, abs(r - R0 - 0.03 - 0.002 * sin(sa * 6.0 - t * 0.35)) - 0.0012 * LINE + 0.0008);
+  d = min(d, marks(uv, t, 24.0, R0 + 0.048, 0.0, 0.0025));
+  return d;
+}
+
+// Tide: the lunar wheel hanging over water, its moons reflected in broken
+// streaks, the tide rising and falling with the heart moon's phase.
+float tide(vec2 uv, float t, float br) {
+  float n = 6.0 + 2.0 * floor(rnd(130.0) * 2.0);
+  float spin = (rnd(131.0) < 0.5 ? -1.0 : 1.0) * 0.025;
+  float R = mix(0.1, 0.11, rnd(132.0)) * br;
+  float mr = mix(0.014, 0.017, rnd(133.0));
+  float hk = mix(0.08, 0.92, fract(t * 0.008 + rnd(134.0)));
+  // The water rises as the moon fills.
+  float lift = 0.5 - abs(hk - 0.5);
+  float s = -mix(0.14, 0.18, rnd(135.0)) + 0.025 * lift * 2.0;
+  vec2 w = uv - vec2(0.0, 0.085);
+  float r = length(w), ang = atan(w.y, w.x);
+  float near;
+  float d = moonRing(w, t, n, R, mr, spin, rnd(136.0), near);
+  d = min(d, orbit(r, R, near, mr));
+  float big = mix(0.04, 0.048, rnd(137.0)) * br;
+  d = min(d, abs(moonLit(rot(0.3) * w, big, hk)) - 0.003 * LINE);
+  d = min(d, abs(r - big) - 0.0012 * LINE + 0.001);
+  vec2 tp = fold(rot(t * spin * 0.5) * w, 4.0 * n);
+  d = min(d, sdLine(tp, vec2(R + mr * 2.2, 0.0), vec2(R + mr * 2.2 + 0.01, 0.0), 0.0015 * LINE));
+  // Clip the sky to above the waterline.
+  float y = uv.y - s - 0.003 * sin(uv.x * 40.0 + t * 0.8);
+  d = max(d, 0.004 - y);
+
+  // The waterline, and the wheel's reflection cut into drifting streaks.
+  d = min(d, sdTaper(vec2(abs(uv.x), y), vec2(0.0), vec2(0.2, 0.0), 0.0025 * LINE, 0.0005));
+  if (y < 0.0) {
+    float depth = -y;
+    // Foreshortened: the sky is squeezed into the strip of water below it.
+    vec2 m = vec2(uv.x + 0.004 * sin(depth * 70.0 - t * 1.6) * (0.5 + depth * 3.0), s + depth / 0.36) - vec2(0.0, 0.085);
+    float rn;
+    float refl = moonRing(m, t, n, R, mr, spin, rnd(136.0), rn);
+    refl = min(refl, abs(moonLit(rot(0.3) * m, big, hk)) - 0.003 * LINE);
+    refl = min(refl, abs(length(m) - big) - 0.0012 * LINE + 0.001);
+    float band = (abs(fract(depth * 90.0 - t * 0.15) - 0.5) - 0.2) / 90.0;
+    d = min(d, max(refl * 0.36, band) + 0.0012 + depth * 0.02);
+  }
+  return d;
+}
+
 void main() {
   // Centred coordinates scaled to the frame's width: SIZE > 1 lets the sigil
   // run off the edges so it fills the frame rather than fits it.
@@ -720,9 +910,21 @@ void main() {
   } else if (uVariant < 7.5) {
     d = deep(uv, t, br);
     tint = vec3(0.6, 0.78, 0.9); // deep water
-  } else {
+  } else if (uVariant < 8.5) {
     d = veil(uv, t, br);
     tint = vec3(0.9, 0.72, 0.6); // candlelight
+  } else if (uVariant < 9.5) {
+    d = orrery(uv, t, br);
+    tint = vec3(0.8, 0.8, 0.86); // silver
+  } else if (uVariant < 10.5) {
+    d = eclipse(uv, t, br);
+    tint = vec3(0.78, 0.72, 0.64); // pale gold
+  } else if (uVariant < 11.5) {
+    d = spiral(uv, t, br);
+    tint = vec3(0.8, 0.8, 0.86); // silver
+  } else {
+    d = tide(uv, t, br);
+    tint = vec3(0.7, 0.78, 0.9); // moonlit water
   }
   // A whisper of warmth or coolness, so the metal reads slightly differently
   // each card; some are engraved finer or heavier, some glow more softly.
@@ -746,8 +948,8 @@ void main() {
 `
 
 /** The levels' sigils, then Revelation concepts under trial in the sigil lab. */
-export type SigilDesign = Sigil | 'water' | 'moons' | 'mirror' | 'threads' | 'deep' | 'veil'
-const VARIANTS: SigilDesign[] = ['fool', 'lovers', 'star', 'water', 'moons', 'mirror', 'threads', 'deep', 'veil']
+export type SigilDesign = Sigil | 'water' | 'moons' | 'mirror' | 'threads' | 'deep' | 'veil' | 'orrery' | 'eclipse' | 'spiral' | 'tide'
+const VARIANTS: SigilDesign[] = ['fool', 'lovers', 'star', 'water', 'moons', 'mirror', 'threads', 'deep', 'veil', 'orrery', 'eclipse', 'spiral', 'tide']
 
 export class CardSigil extends ShaderCanvas {
   static properties = { ...ShaderCanvas.properties, sigil: { type: String } }
