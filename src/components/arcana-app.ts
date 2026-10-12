@@ -75,7 +75,8 @@ export class ArcanaApp extends LitElement {
     const n = v.seats.length
     return html`
       <header class="fade-in mt-2 flex flex-col items-center text-center">
-        <div class="seat-ring" aria-hidden="true">
+        <h1 class="mt-6 font-display text-6xl font-semibold tracking-[-0.02em] text-gold">Arcana</h1>
+        <div class="seat-ring mt-6" aria-hidden="true">
           <div class="seat-orbit"></div>
           <div class="seat-halo"></div>
           <div class="absolute inset-0 m-auto h-16 w-16 text-gold">${emblem('The Star')}</div>
@@ -85,10 +86,6 @@ export class ArcanaApp extends LitElement {
             </div>`,
           )}
         </div>
-        <h1 class="mt-1 font-display text-6xl font-semibold tracking-[-0.02em] text-gold">Arcana</h1>
-        <p class="mt-2 max-w-[19rem] text-base leading-snug text-parchment/70">
-          Questions for getting to know each other. One phone, passed around the circle.
-        </p>
       </header>
 
       ${v.saved
@@ -106,10 +103,7 @@ export class ArcanaApp extends LitElement {
         : nothing}
 
       <section class="fade-in mt-8">
-        <div class="mb-3 flex items-baseline justify-between">
-          <h2 class="font-display text-2xl font-semibold text-parchment">The circle</h2>
-          <p class="text-sm text-parchment/50">Clockwise, in seating order</p>
-        </div>
+        <h2 class="mb-3 font-display text-2xl font-semibold text-parchment">The circle</h2>
         <ol class="space-y-2">
           ${v.names.map(
             (name, index) => html`
