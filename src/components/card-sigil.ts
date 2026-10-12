@@ -12,7 +12,7 @@ import { ShaderCanvas } from './shader-canvas'
  *
  *   fool   — Perception: a wandering, blinking eye inside the vine sigil
  *   lovers — Connection: two interlocking rings joined by a twisting helix
- *   star   — Reflection: a many-pointed star, rays and a twinkling ring
+ *   star   — Revelation: a many-pointed star, rays and a twinkling ring
  *
  * The card's seed (`uSeed`) varies each design, in its parts as well as its
  * proportions — spoke counts and styles, pupils, hearts, links, rings of
@@ -275,7 +275,7 @@ float lovers(vec2 uv, float t, float br) {
   return d;
 }
 
-// ---- The Star: Reflection ----
+// ---- The Star: Revelation ----
 // Five to nine points turning either way, a solid, hollow or empty heart,
 // rays of different reach, dots or diamonds ringing it, a crescent sometimes
 // and a scatter of sparkles of its own.

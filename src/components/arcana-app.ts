@@ -319,7 +319,7 @@ export class ArcanaApp extends LitElement {
       ? cardFront(
           c.arcanum,
           html`<p class="font-display text-[1.35em] leading-snug font-medium">${parts(c.text, 'text-wine')}</p>`,
-          html`<p class="font-sans text-[0.78em] leading-snug text-sepia/75">${parts(c.instruction, 'font-bold text-wine')}</p>`,
+          html`<p class="font-sans text-[0.8em] leading-snug text-sepia/85">${parts(c.instruction, 'font-bold text-wine')}</p>`,
         )
       : nothing
     const advance = () => {
@@ -435,14 +435,17 @@ const staticCard = (arcanum: Arcanum, body: TemplateResult) => html`
   </div>
 `
 
-/** A card's face. `note`, if given, is a small line of play instructions above the title. */
+/**
+ * A card's face. `note`, if given, is a small line of play instructions at the
+ * top, so who reads it to whom is clear before the question is read out.
+ */
 const cardFront = (arcanum: Arcanum, body: TemplateResult, note?: TemplateResult) => html`
   <div class="tarot-frame"></div>
   <div class="relative flex h-full flex-col items-center px-[1.6em] pt-[1.5em] pb-[1.3em] text-center">
+    ${note ? html`<div class="mb-[0.7em] w-full border-b border-gold-dim/50 px-[0.4em] pb-[0.6em]">${note}</div>` : nothing}
     <div class="font-sans text-[0.8em] font-bold tracking-[0.3em] text-gold-dim">${arcanum.numeral}</div>
     <div class="mt-[0.5em] h-[3.2em] w-[3.2em] text-gold-dim">${emblem(arcanum.title)}</div>
     <div class="flex flex-1 items-center justify-center py-[0.8em]">${body}</div>
-    ${note ? html`<div class="mb-[0.9em] px-[0.4em]">${note}</div>` : nothing}
     <div class="w-full border-t border-gold-dim/50 pt-[0.6em]">
       <div class="font-display text-[1.25em] font-semibold tracking-[0.02em]">${arcanum.title}</div>
       <div class="font-display text-[0.95em] italic opacity-70">${arcanum.theme}</div>
