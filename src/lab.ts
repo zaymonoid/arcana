@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit'
 import { cardBack } from './components/art'
-import type { SigilDesign } from './components/card-sigil'
+import type { Sigil } from './deck'
 import './components/card-sigil'
 import './components/iridescent-shimmer'
 
@@ -10,32 +10,22 @@ import './components/iridescent-shimmer'
  * Not part of the game, so it keeps its own throwaway state.
  */
 
-const DESIGNS: { id: SigilDesign; name: string }[] = [
-  { id: 'star', name: 'Star (current)' },
-  { id: 'deep', name: 'Deep Water' },
-  { id: 'veil', name: 'Veil' },
-  { id: 'water', name: 'Still Water' },
-  { id: 'moons', name: 'Lunar Wheel' },
-  { id: 'orrery', name: 'Orrery' },
-  { id: 'eclipse', name: 'Eclipse' },
-  { id: 'spiral', name: 'Spiral' },
-  { id: 'tide', name: 'Tide' },
-  { id: 'mirror', name: 'Scrying Mirror' },
-  { id: 'threads', name: 'Constellation' },
+const DESIGNS: { id: Sigil; name: string }[] = [
   { id: 'fool', name: 'Fool' },
   { id: 'lovers', name: 'Lovers' },
+  { id: 'star', name: 'Star' },
 ]
 
 const params = new URLSearchParams(location.search)
 
 class SigilLab extends LitElement {
   static properties = { design: { state: true }, seeds: { state: true } }
-  declare design: SigilDesign
+  declare design: Sigil
   declare seeds: number[]
 
   constructor() {
     super()
-    this.design = (params.get('d') as SigilDesign) || 'moons'
+    this.design = (params.get('d') as Sigil) || 'star'
     const n = Number(params.get('n')) || 3
     this.seeds = params.get('seeds')?.split(',').map(Number) ?? Array.from({ length: n }, Math.random)
   }
@@ -44,7 +34,7 @@ class SigilLab extends LitElement {
     return this
   }
 
-  private pick(id: SigilDesign) {
+  private pick(id: Sigil) {
     this.design = id
     const url = new URL(location.href)
     url.searchParams.set('d', id)

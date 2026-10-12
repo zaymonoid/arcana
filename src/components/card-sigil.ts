@@ -12,11 +12,11 @@ import { ShaderCanvas } from './shader-canvas'
  *
  *   fool   — Perception: a wandering, blinking eye inside the vine sigil
  *   lovers — Connection: two interlocking rings joined by a twisting helix
- *   star   — Revelation: a many-pointed star, rays and a twinkling ring
+ *   star   — Revelation: a wheel of moon phases around an eclipse
  *
  * The card's seed (`uSeed`) varies each design, in its parts as well as its
  * proportions — spoke counts and styles, pupils, hearts, links, rings of
- * marks, crescents, line weight — so no two cards of a level are drawn alike.
+ * marks, moons, line weight — so no two cards of a level are drawn alike.
  */
 
 const FRAG = `
@@ -161,12 +161,6 @@ float marks(vec2 uv, float t, float n, float r, float kind, float size) {
   return sdLine(mp, vec2(-sz, 0.0), vec2(sz, 0.0), 0.002 * LINE);
 }
 
-// A crescent of radius r, open towards +x, drawn in outline.
-float crescent(vec2 p, float r) {
-  float moon = max(length(p) - r, -(length(p - vec2(r * 0.55, 0.0)) - r * 0.85));
-  return abs(moon) - 0.003 * LINE;
-}
-
 // A straight spoke along +x from r0 to r1, tapering, with a bead at its tip.
 float ray(vec2 fp, float r0, float r1) {
   float d = sdTaper(fp, vec2(r0, 0.0), vec2(r1, 0.0), 0.003 * LINE, 0.0008 * LINE);
@@ -276,60 +270,9 @@ float lovers(vec2 uv, float t, float br) {
 }
 
 // ---- The Star: Revelation ----
-// Five to nine points turning either way, a solid, hollow or empty heart,
-// rays of different reach, dots or diamonds ringing it, a crescent sometimes
-// and a scatter of sparkles of its own.
-float star(vec2 uv, float t, float br) {
-  float n = 5.0 + floor(rnd(30.0) * 5.0);
-  float spin = (rnd(31.0) < 0.5 ? -1.0 : 1.0) * mix(0.03, 0.06, rnd(32.0));
-  float reach = mix(0.30, 0.37, rnd(33.0));
-  float heart = floor(rnd(34.0) * 3.0);
-  float r = length(uv), ang = atan(uv.y, uv.x);
-  vec2 p = rot(t * spin) * uv;
-
-  // A many-pointed star. Its points start from +y, so the rays are folded
-  // from a quarter turn round to line up with them.
-  float d = abs(sdStar(p, 0.075 * br, n, 3.0)) - 0.003 * LINE;
-  if (heart < 1.0) d = min(d, sdStar(p, 0.028 * br, n, 3.0));
-  else if (heart < 2.0) d = min(d, abs(sdStar(rot(PI / n) * p, 0.034 * br, n, 3.0)) - 0.0025 * LINE);
-  else d = min(d, length(p) - 0.009);
-
-  // Long rays from the points, short ones between, tapering to nothing.
-  vec2 fp = fold(warped(rot(PI * 0.5) * p, t), n);
-  d = smin(d, sdTaper(fp, vec2(0.085, 0.0), vec2(reach, 0.0), 0.004 * LINE, 0.0), K);
-  vec2 hp = fold(rot(PI * 0.5 + PI / n) * p, n);
-  if (rnd(35.0) < 0.5) d = smin(d, sdTaper(hp, vec2(0.06, 0.0), vec2(0.15, 0.0), 0.003 * LINE, 0.0), K);
-  else d = smin(d, ray(hp, 0.1, mix(0.17, 0.2, rnd(33.0))), K);
-
-  // A ring of twinkling marks, and a fine ring outside it.
-  float mk = floor(rnd(36.0) * 3.0);
-  d = min(d, marks(uv, t, n * (4.0 + floor(rnd(32.0) * 2.0)), 0.19 * br, mk, 0.0035));
-  d = min(d, abs(r - (0.215 * br + 0.003 * sin(ang * 6.0 - t * 0.35))) - 0.002 * LINE);
-
-  // Drifting arcs between the rays.
-  d = smin(d, arcs(uv, t, n, 0.125 * br, 0.06, 0.6), K * 0.6);
-
-  // Now and then a crescent hangs in a corner, above or below, open outwards.
-  if (rnd(37.0) < 0.45) {
-    float side = rnd(38.0) < 0.5 ? -1.0 : 1.0;
-    vec2 mp = rot(-side * 0.9) * (uv - vec2(0.105, side * 0.255 + 0.006 * sin(t * 0.3)));
-    d = min(d, crescent(mp, 0.028));
-  }
-
-  // Four-pointed sparkles scattered above and below, in this card's own number and places.
-  float count = 4.0 + floor(rnd(39.0) * 7.0);
-  for (int i = 0; i < 10; i++) {
-    if (float(i) >= count) break;
-    float fi = float(i) + 9.0 * uSeed;
-    vec2 pos = vec2(hash(vec2(fi, 1.0)) * 0.3 - 0.15, (0.225 + 0.08 * hash(vec2(fi, 2.0))) * (mod(float(i), 2.0) * 2.0 - 1.0));
-    float size = 0.004 + 0.012 * pow(0.5 + 0.5 * sin(t * 0.9 + fi * 2.3), 3.0);
-    d = min(d, sdStar(uv - pos, size, 4.0, 2.3));
-  }
-  return d;
-}
-
-// ---- Revelation concepts (iteration) ----
-
+// A wheel of six or eight moons whose phases turn as it does, around a sun
+// of rays that a moon crosses on a long slow swing: as the cover nears
+// total a corona brightens round it. Ticks and drifting arcs ring the whole.
 // The lit part of a moon of radius r, at phase k: 0 new, 0.5 full, 1 new
 // again; it waxes from the right.
 float moonLit(vec2 p, float r, float k) {
@@ -339,352 +282,6 @@ float moonLit(vec2 p, float r, float k) {
   float xt = e * sqrt(max(0.0, 1.0 - p.y * p.y / (r * r)));
   return max(disc, xt - p.x);
 }
-
-// An ellipse with semi-axes ab, approximately (good enough near the line).
-float sdEllipse(vec2 p, vec2 ab) {
-  return (length(p / ab) - 1.0) * min(ab.x, ab.y);
-}
-
-// Still Water: a crescent moon over a horizon, its reflection broken into
-// streaks on the water and a glade of glints running down towards you. Now
-// and then a drop falls and rings spread out across the surface.
-float water(vec2 uv, float t, float br) {
-  float horizon = mix(-0.035, 0.015, rnd(40.0));
-  float mr = mix(0.032, 0.04, rnd(42.0)) * br;
-  vec2 mc = vec2(mix(-0.035, 0.035, rnd(43.0)), horizon + mix(0.115, 0.15, rnd(44.0)));
-  float tilt = (rnd(45.0) - 0.5) * 1.2;
-  float k = mix(0.1, 0.2, rnd(41.0));
-  float y = uv.y - horizon;
-
-  // The horizon, fading out to either side.
-  float d = sdTaper(vec2(abs(uv.x), y), vec2(0.0), vec2(0.2, 0.0), 0.0025 * LINE, 0.0);
-
-  // The moon: its lit crescent and the faint ring of its dark side.
-  vec2 q = rot(tilt) * (uv - mc);
-  d = min(d, abs(moonLit(q, mr, k)) - 0.003 * LINE);
-  d = min(d, abs(length(q) - mr) - 0.0012 * LINE + 0.0012);
-
-  // Its reflection: the sky flipped and swayed, cut into streaks.
-  if (y < 0.0) {
-    float depth = -y;
-    vec2 m = vec2(uv.x + 0.004 * sin(depth * 70.0 - t * 1.6) * (0.5 + depth * 3.0), horizon + depth);
-    float refl = moonLit(rot(tilt) * (m - mc), mr * 1.05, k);
-    float band = (abs(fract(depth * 90.0 - t * 0.15) - 0.5) - 0.22) / 90.0;
-    d = min(d, max(refl, band) + 0.0015);
-
-    // The glade: glints under the moon, wider and sparser towards you.
-    float sp = 0.014 + depth * 0.05;
-    float row = floor(depth / 0.016);
-    float ly = mod(depth, 0.016) - 0.008;
-    float hl = (0.004 + depth * 0.12) * pow(0.5 + 0.5 * sin(t * 1.3 + row * 2.7 + uSeed * 20.0), 2.0);
-    float gx = uv.x - mc.x - 0.012 * sin(row * 1.9 + t * 0.4);
-    float glint = sdLine(vec2(gx, ly), vec2(-hl, 0.0), vec2(hl, 0.0), 0.0012 * LINE);
-    d = min(d, max(glint, 0.04 + mr - depth) + 0.0008);
-  }
-
-  // A drop falls from the top of the card, and rings spread where it lands.
-  float period = 7.0;
-  float c = fract(t / period + rnd(46.0));
-  vec2 land = vec2(mix(-0.07, 0.07, rnd(47.0)), horizon - mix(0.09, 0.15, rnd(48.0)));
-  if (c < 0.22) {
-    float fy = mix(0.3, land.y, pow(c / 0.22, 2.0));
-    d = min(d, sdLens(vec2(uv.y - fy, uv.x - land.x), 0.008, 0.005));
-  }
-  for (int i = 0; i < 3; i++) {
-    float age = c - 0.22 - float(i) * 0.07;
-    if (age > 0.0) {
-      float R = age * 0.3;
-      vec2 rp = vec2(uv.x - land.x, (uv.y - land.y) * 3.2);
-      float ring = abs(length(rp) - R) - 0.0018 * LINE;
-      d = min(d, ring + age * 0.012);
-    }
-  }
-
-  // A few stars above, each with a glint in the water below.
-  for (int i = 0; i < 9; i++) {
-    float fi = float(i) + 7.0 * uSeed;
-    vec2 sp = vec2(hash(vec2(fi, 4.0)) * 0.28 - 0.14, horizon + 0.05 + 0.2 * hash(vec2(fi, 5.0)));
-    if (length(sp - mc) < mr * 2.2) continue;
-    float tw = 0.5 + 0.5 * sin(t * 1.1 + fi * 2.3);
-    d = min(d, length(uv - sp) - 0.0015 - 0.0025 * tw);
-    vec2 gp = vec2(sp.x, 2.0 * horizon - sp.y);
-    d = min(d, sdLine(uv - gp, vec2(-0.004 * tw, 0.0), vec2(0.004 * tw, 0.0), 0.0008) + 0.001);
-  }
-  return d;
-}
-
-// Lunar Wheel: a ring of moons whose phases turn as the wheel does, around a
-// moon that slowly fills and empties, inside a fine ring of ticks.
-float moons(vec2 uv, float t, float br) {
-  float n = 6.0 + 2.0 * floor(rnd(50.0) * 2.0);
-  float spin = (rnd(51.0) < 0.5 ? -1.0 : 1.0) * 0.025;
-  float R = mix(0.118, 0.13, rnd(52.0)) * br;
-  float mr = mix(0.016, 0.021, rnd(53.0));
-  float r = length(uv), ang = atan(uv.y, uv.x);
-  float d = 1e9, near = 1e9;
-
-  for (int i = 0; i < 8; i++) {
-    if (float(i) >= n) break;
-    float a = float(i) / n * 2.0 * PI + t * spin;
-    vec2 c = R * vec2(cos(a), sin(a));
-    near = min(near, length(uv - c));
-    float k = fract(float(i) / n + rnd(54.0));
-    vec2 p = uv - c;
-    d = min(d, moonLit(p, mr, k));
-    d = min(d, abs(length(p) - mr) - 0.0012 * LINE + 0.001);
-  }
-
-  // The moon at the heart.
-  float big = mix(0.05, 0.06, rnd(55.0)) * br;
-  float hk = mix(0.08, 0.92, fract(t * 0.008 + rnd(56.0)));
-  d = min(d, abs(moonLit(rot(0.3) * uv, big, hk)) - 0.003 * LINE);
-  d = min(d, abs(r - big) - 0.0012 * LINE + 0.001);
-  d = min(d, abs(r - big * 1.4 - 0.0015 * sin(ang * 5.0 + t * 0.4)) - 0.0015 * LINE);
-
-  // An orbit line threading the moons, and ticks outside it.
-  d = min(d, max(abs(r - R) - 0.0012 * LINE, mr * 1.6 - near));
-  float ticks = 4.0 * n;
-  vec2 tp = fold(rot(t * spin * 0.5) * uv, ticks);
-  d = min(d, sdLine(tp, vec2(R + mr * 2.2, 0.0), vec2(R + mr * 2.2 + 0.012, 0.0), 0.0015 * LINE));
-  d = smin(d, arcs(uv, -t, n, (R + mr * 2.2 + 0.03), 0.04, 0.6), K * 0.6);
-
-  // Above and below: a falling line of tiny phases, like a sky clock.
-  for (int i = 0; i < 4; i++) {
-    float fi = float(i);
-    float yy = 0.205 + fi * 0.03;
-    for (int s = 0; s < 2; s++) {
-      float sg = float(s) * 2.0 - 1.0;
-      vec2 p = uv - vec2(0.0, sg * yy);
-      float k = fract(0.5 + sg * (fi + 1.0) * 0.1 + t * 0.01);
-      d = min(d, moonLit(p, 0.0075 - fi * 0.0012, k));
-    }
-  }
-  return d;
-}
-
-// Scrying Mirror: an oval glass in a beaded frame, two crescents back to back
-// in it like a face and its reflection, ripples drawing inward and a sheen
-// passing across the glass.
-float mirror(vec2 uv, float t, float br) {
-  vec2 ab = vec2(mix(0.105, 0.12, rnd(60.0)), mix(0.17, 0.195, rnd(61.0))) * br;
-  float e = sdEllipse(uv, ab);
-  float d = abs(e) - 0.004 * LINE;
-  d = min(d, abs(sdEllipse(uv, ab + 0.014)) - 0.002 * LINE);
-
-  // Beads round the frame, by angle on the ellipse.
-  float beads = 2.0 * floor(mix(10.0, 14.0, rnd(62.0)));
-  float th = atan(uv.y / ab.y, uv.x / ab.x);
-  float sector = 2.0 * PI / beads;
-  float bi = floor(th / sector + 0.5);
-  float ba = bi * sector;
-  vec2 bp = (ab + 0.007) * vec2(cos(ba), sin(ba));
-  float tw = 0.5 + 0.5 * sin(t * 1.4 + hash(vec2(bi, 9.0)) * 6.283);
-  d = min(d, length(uv - bp) - 0.0018 - 0.0014 * tw);
-
-  // A finial above and a stem below.
-  vec2 top = vec2(0.0, ab.y + 0.03);
-  d = min(d, crescent(rot(-PI * 0.5) * (uv - top), 0.016));
-  d = min(d, length(uv - top + vec2(0.0, 0.004)) - 0.004);
-  d = smin(d, sdTaper(vec2(abs(uv.x), -uv.y), vec2(0.0, ab.y + 0.014), vec2(0.0, 0.3), 0.006 * LINE, 0.002 * LINE), K);
-  d = min(d, length(uv - vec2(0.0, -ab.y - 0.05)) - 0.006);
-
-  // Inside the glass.
-  float inside = e + 0.012;
-  float g = 1e9;
-  float gap = mix(0.012, 0.02, rnd(63.0)) + 0.004 * sin(t * 0.5);
-  float cr = mix(0.034, 0.042, rnd(64.0));
-  g = min(g, crescent(rot(PI) * (uv - vec2(-gap - cr * 0.2, 0.0)), cr));
-  g = min(g, crescent(uv - vec2(gap + cr * 0.2, 0.0), cr));
-  g = min(g, length(uv) - 0.004);
-  // Ripples drawing inward to the middle.
-  for (int i = 0; i < 2; i++) {
-    float f = fract(-t * 0.04 + float(i) / 2.0);
-    float ri = sdEllipse(uv, ab * mix(0.45, 0.85, f));
-    g = min(g, abs(ri) - 0.001 * LINE + 0.002 + 0.003 * (1.0 - sin(f * PI)));
-  }
-  // The sheen: two slanted strokes that sweep across now and then.
-  float s = mix(-0.35, 0.35, fract(t * 0.06 + rnd(65.0)));
-  vec2 sp = rot(0.7) * uv;
-  g = min(g, abs(sp.x - s) - 0.002 * LINE);
-  g = min(g, abs(sp.x - s - 0.018) - 0.001 * LINE);
-  d = min(d, max(g, inside));
-  return d;
-}
-
-// Constellation: one point for each of us, drifting, joined by threads that
-// draw in from one to another and fade, each point with a halo of its own.
-vec2 node(float i, float n, float t) {
-  float a = i / n * 2.0 * PI + (hash(vec2(i, uSeed * 13.0)) - 0.5) * 0.7 + 0.4;
-  vec2 rad = vec2(0.105, 0.19) * mix(0.55, 1.0, hash(vec2(i, uSeed * 7.0 + 1.0)));
-  vec2 p = rad * vec2(cos(a), sin(a));
-  return p + 0.006 * vec2(sin(t * 0.3 + i * 2.1), cos(t * 0.27 + i * 1.3));
-}
-
-float threads(vec2 uv, float t, float br) {
-  float n = 5.0 + floor(rnd(70.0) * 4.0);
-  float density = mix(0.25, 0.5, rnd(71.0));
-  float d = 1e9;
-  for (int i = 0; i < 8; i++) {
-    if (float(i) >= n) break;
-    float fi = float(i);
-    vec2 a = node(fi, n, t);
-    float tw = 0.5 + 0.5 * sin(t * 0.9 + fi * 2.3);
-    d = min(d, length(uv - a) - 0.004 - 0.002 * tw);
-    d = min(d, abs(length(uv - a) - 0.011 - 0.004 * tw) - 0.0012 * LINE + 0.001 * (1.0 - tw));
-    for (int j = 0; j < 8; j++) {
-      if (j <= i || float(j) >= n) continue;
-      float fj = float(j);
-      float h = hash(vec2(fi * 8.0 + fj, uSeed * 31.0));
-      bool ring = (j == i + 1) || (i == 0 && fj == n - 1.0);
-      if (!ring && h > density) continue;
-      vec2 b = node(fj, n, t);
-      // Each thread draws from one end, holds, and withdraws to the other.
-      float ph = fract(t * 0.04 + h);
-      float s0 = smoothstep(0.8, 0.95, ph);
-      float s1 = smoothstep(0.0, 0.15, ph);
-      if (h < 0.5) { vec2 tmp = a; a = b; b = tmp; }
-      vec2 a2 = mix(a, b, s0), b2 = mix(a, b, s1);
-      float w = ring ? 0.0016 : 0.0011;
-      d = min(d, max(sdLine(uv, a2, b2, w * LINE), 0.016 - min(length(uv - a), length(uv - b))));
-      a = node(fi, n, t);
-    }
-  }
-  // A faint ring that holds them all.
-  d = min(d, abs(sdEllipse(uv, vec2(0.135, 0.235) * br)) - 0.0012 * LINE + 0.0008);
-  // Dust between the points.
-  for (int i = 0; i < 10; i++) {
-    float fi = float(i) + 5.0 * uSeed;
-    vec2 p = vec2(hash(vec2(fi, 11.0)) * 0.3 - 0.15, hash(vec2(fi, 12.0)) * 0.5 - 0.25);
-    d = min(d, length(uv - p) - 0.0008 - 0.0012 * (0.5 + 0.5 * sin(t * 1.5 + fi * 3.1)));
-  }
-  return d;
-}
-
-// Deep Water: the surface high on the card under a thin moon. Now and then a
-// drop falls through it, rings spreading, and sinks slowly through shafts of
-// light to a shell far below that opens on a glowing pearl.
-float deep(vec2 uv, float t, float br) {
-  float s = mix(0.14, 0.17, rnd(80.0));
-  float y = uv.y - s - 0.003 * sin(uv.x * 40.0 + t * 0.8);
-  float d = sdTaper(vec2(abs(uv.x), y), vec2(0.0), vec2(0.2, 0.0), 0.0025 * LINE, 0.0005);
-
-  // A thin moon above.
-  vec2 mc = vec2(mix(-0.06, 0.06, rnd(81.0)), s + mix(0.06, 0.08, rnd(82.0)));
-  float mr = 0.022;
-  float k = mix(0.1, 0.18, rnd(83.0));
-  d = min(d, abs(moonLit(uv - mc, mr, k)) - 0.0025 * LINE);
-  d = min(d, abs(length(uv - mc) - mr) - 0.001 * LINE + 0.0012);
-
-  // Shafts of light slanting down from the surface, swaying, fading with depth.
-  vec2 c = vec2(0.0, -mix(0.15, 0.18, rnd(84.0)));
-  for (int i = 0; i < 5; i++) {
-    float fi = float(i) - 2.0;
-    vec2 a = vec2(fi * 0.045 + 0.01 * sin(t * 0.2 + fi), s - 0.01);
-    vec2 b = vec2(c.x + fi * 0.012, c.y + 0.07);
-    float shaft = sdTaper(uv, a, b, 0.0022 * LINE, 0.0);
-    d = min(d, shaft + 0.0015 + 0.0015 * (0.5 + 0.5 * sin(t * 0.5 + fi * 1.7)));
-  }
-
-  // The drop: falls, rings spread, and it sinks with a trail of bubbles.
-  float period = 9.0;
-  float cyc = fract(t / period + rnd(85.0));
-  float lx = mix(-0.04, 0.04, rnd(86.0));
-  if (cyc < 0.12) {
-    float fy = mix(0.3, s, pow(cyc / 0.12, 2.0));
-    d = min(d, sdLens(vec2(uv.y - fy, uv.x - lx), 0.007, 0.0045));
-  } else {
-    float sink = (cyc - 0.12) / 0.88;
-    float dy = mix(s - 0.012, c.y + 0.05, 1.0 - pow(1.0 - sink, 2.0));
-    vec2 dp = vec2(mix(lx, c.x, sink) + 0.004 * sin(t * 1.3), dy);
-    d = min(d, length(uv - dp) - 0.0035 + 0.003 * smoothstep(0.85, 1.0, sink));
-    for (int i = 0; i < 4; i++) {
-      float fi = float(i);
-      float rise = fract(t * 0.25 + fi * 0.25);
-      vec2 bp = dp + vec2(0.006 * sin(t * 2.0 + fi * 2.0), rise * 0.06);
-      d = min(d, abs(length(uv - bp) - 0.0025 * (1.0 - rise)) - 0.0008 + rise * 0.002);
-    }
-    for (int i = 0; i < 3; i++) {
-      float age = cyc - 0.12 - float(i) * 0.06;
-      if (age > 0.0 && age < 0.5) {
-        vec2 rp = vec2(uv.x - lx, (uv.y - s) * 3.5);
-        d = min(d, abs(length(rp) - age * 0.35) - 0.0016 * LINE + age * 0.014);
-      }
-    }
-  }
-
-  // The shell: a deep fluted bowl, and a lid hinged on the left that lifts
-  // and settles again.
-  float sr = mix(0.04, 0.048, rnd(87.0));
-  float open = 0.7 * smoothstep(-0.3, 0.6, sin(t * 0.22 + rnd(88.0) * 6.283));
-  vec2 p = uv - c;
-  float pa = atan(p.x, -p.y);
-  float flute = 0.0025 * cos(pa * 11.0);
-  float bowl = max(abs(length(p) - sr - flute) - 0.0025 * LINE, p.y);
-  bowl = min(bowl, sdLine(p, vec2(-sr, 0.0), vec2(sr, 0.0), 0.0015 * LINE));
-  vec2 h = vec2(-sr, 0.0);
-  vec2 q = rot(open) * (p - h) + h;
-  float lid = max(abs(length(q * vec2(1.0, 2.2)) - sr) / 2.2 - 0.0022 * LINE, -q.y);
-  d = min(d, min(bowl, lid));
-  // Ribs on the bowl, running in to the hinge of its curve.
-  float rib = max(abs(fold(rot(-PI * 0.5) * p, 11.0).y) - 0.0007, max(length(p) - sr, sr * 0.55 - length(p)));
-  d = min(d, max(rib, p.y) + 0.001);
-  // The pearl lifts a little as the lid opens, glowing brighter, its light
-  // spreading in rings.
-  vec2 pp = p - vec2(0.0, 0.006 + 0.012 * open);
-  d = min(d, length(pp) - 0.008 - 0.004 * open);
-  for (int i = 0; i < 3; i++) {
-    float f = fract(t * 0.12 + float(i) / 3.0);
-    d = min(d, abs(length(pp) - 0.014 - 0.06 * f) - 0.001 * LINE + 0.003 * f + 0.005 * (1.0 - open));
-  }
-  return d;
-}
-
-// Veil: stage curtains, joined at the top and swept aside to tie-backs, that
-// draw open and fall closed again slowly on a small candle flame.
-float veil(vec2 uv, float t, float br) {
-  float yt = -mix(0.06, 0.1, rnd(90.0));
-  float open = mix(0.035, 0.1, 0.5 + 0.5 * sin(t * 0.18 + rnd(91.0) * 6.283));
-  float folds = 3.0 + floor(rnd(92.0) * 2.0);
-  float sp = mix(0.022, 0.03, rnd(93.0));
-  float side = sign(uv.x + 1e-5);
-  float x = abs(uv.x), y = uv.y;
-  // The parting widens from the top down to the tie-backs, then hangs straight.
-  float top = 0.255;
-  float u = clamp((top - y) / (top - yt), 0.0, 1.0);
-  float gap = open * (y > yt ? pow(u, 1.4) : 1.0 + 0.4 * (yt - y));
-  // Folds gather at the tie-backs and spread above and below.
-  float gather = 0.35 + 0.65 * smoothstep(0.0, 0.12, abs(y - yt));
-  float d = 1e9;
-  for (int i = 0; i < 5; i++) {
-    float fi = float(i);
-    if (fi >= folds) break;
-    float fx = 0.003 + gap + fi * sp * gather * (1.0 + 0.2 * cos(y * 9.0 + fi)) + 0.003 * sin(y * 22.0 + t * 0.7 + fi * 1.3 + side) * u;
-    d = min(d, abs(x - fx) * 0.9 - (fi < 0.5 ? 0.0025 : 0.0015) * LINE);
-  }
-  // A tie-back knot on each side.
-  vec2 kp = vec2(x - 0.003 - open - (folds - 1.0) * sp * 0.35 * 0.5, y - yt);
-  d = min(d, length(kp) - 0.005);
-  d = min(d, sdLine(kp, vec2(0.0), vec2(0.006, -0.03), 0.0015 * LINE));
-  // A scalloped valance along the top.
-  vec2 vp = vec2(mod(uv.x + 0.02, 0.04) - 0.02, uv.y - 0.262);
-  d = min(d, sdArc(rot(-PI * 0.5) * vp, 0.02, 1.2, 0.0018 * LINE));
-
-  // The flame: a teardrop that leans and flickers, its wick and a soft halo,
-  // shown more as the curtains part.
-  vec2 f = (uv - vec2(0.0, yt + 0.03)) / 1.5;
-  float flick = 0.003 * sin(t * 3.1) + 0.002 * sin(t * 4.7 + 1.0);
-  float body = smin(length(f) - 0.011, sdTaper(f, vec2(0.0), vec2(flick, 0.04 + 0.004 * sin(t * 2.3)), 0.009, 0.0), 0.01);
-  float g = abs(body) - 0.002 * LINE;
-  g = min(g, length(f - vec2(0.0, 0.004)) - 0.004);
-  g = min(g, sdLine(f, vec2(0.0, -0.02), vec2(0.0, -0.011), 0.0012 * LINE));
-  float halo = abs(length(f - vec2(0.0, 0.01)) - 0.035 - 0.004 * sin(t * 0.8)) - 0.001 * LINE;
-  g = min(g, halo + 0.002);
-  float shown = smoothstep(0.035, 0.08, open);
-  d = min(d, g * 1.5 + 0.003 * (1.0 - shown));
-  return d;
-}
-
-// ---- Lunar Wheel variants ----
 
 // A ring of n moons of radius mr on an orbit of radius R, turning at spin,
 // their phases running round the ring from k0. Returns the field, and the
@@ -709,53 +306,7 @@ float orbit(float r, float R, float near, float mr) {
   return max(abs(r - R) - 0.0012 * LINE, mr * 1.6 - near);
 }
 
-// Orrery: two rings of moons on nested orbits turning opposite ways, the
-// inner one tilted into an ellipse, around a heart moon on a fine axis.
-float orrery(vec2 uv, float t, float br) {
-  float n1 = 8.0 + 2.0 * floor(rnd(100.0) * 2.0);
-  float n2 = 4.0 + floor(rnd(101.0) * 2.0);
-  float dir = rnd(102.0) < 0.5 ? -1.0 : 1.0;
-  float R1 = mix(0.15, 0.16, rnd(103.0)) * br;
-  float R2 = mix(0.085, 0.095, rnd(104.0)) * br;
-  float r = length(uv);
-  float near;
-  float d = moonRing(uv, t, n1, R1, 0.013, dir * 0.02, rnd(105.0), near);
-  d = min(d, orbit(r, R1, near, 0.013));
-
-  // The inner orbit is an ellipse seen at a tilt, carrying bigger moons.
-  float tilt = (rnd(106.0) - 0.5) * 0.8;
-  vec2 e = rot(tilt) * uv;
-  vec2 q = vec2(e.x, e.y / 0.62);
-  float near2 = 1e9;
-  for (int i = 0; i < 5; i++) {
-    if (float(i) >= n2) break;
-    float a = float(i) / n2 * 2.0 * PI - t * dir * 0.045;
-    vec2 p = uv - rot(-tilt) * (R2 * vec2(cos(a), 0.62 * sin(a)));
-    near2 = min(near2, length(p));
-    d = min(d, moonLit(p, 0.02, fract(float(i) / n2 + rnd(107.0) + 0.25)));
-    d = min(d, abs(length(p) - 0.02) - 0.0012 * LINE + 0.001);
-  }
-  d = min(d, max(abs(length(q) - R2) * 0.62 - 0.0012 * LINE, 0.032 - near2));
-
-  // The heart: a moon with a hairline axis through it and a hub.
-  float big = mix(0.03, 0.036, rnd(108.0)) * br;
-  float hk = mix(0.08, 0.92, fract(t * 0.008 + rnd(109.0)));
-  d = min(d, abs(moonLit(rot(tilt) * uv, big, hk)) - 0.0028 * LINE);
-  d = min(d, abs(r - big) - 0.0012 * LINE + 0.001);
-  d = min(d, max(abs(e.x) - 0.0008 * LINE, abs(e.y) - R2 * 0.62 - 0.012));
-  d = min(d, length(e - vec2(0.0, R2 * 0.62 + 0.012)) - 0.003);
-  d = min(d, length(e + vec2(0.0, R2 * 0.62 + 0.012)) - 0.003);
-
-  // Ticks round the rim and arcs beyond.
-  vec2 tp = fold(rot(t * dir * 0.01) * uv, 2.0 * n1);
-  d = min(d, sdLine(tp, vec2(R1 + 0.028, 0.0), vec2(R1 + 0.038, 0.0), 0.0015 * LINE));
-  d = smin(d, arcs(uv, -t, n2, R1 + 0.065, 0.04, 0.6), K * 0.6);
-  return d;
-}
-
-// Eclipse: a sun of rays at the heart that a moon crosses slowly, the wheel
-// of phases around it and a thin corona that swells as the disc is covered.
-float eclipse(vec2 uv, float t, float br) {
+float star(vec2 uv, float t, float br) {
   float n = 6.0 + 2.0 * floor(rnd(110.0) * 2.0);
   float spin = (rnd(111.0) < 0.5 ? -1.0 : 1.0) * 0.025;
   float R = mix(0.125, 0.135, rnd(112.0)) * br;
@@ -778,8 +329,8 @@ float eclipse(vec2 uv, float t, float br) {
   float cross = sin(t * 0.08 + rnd(117.0) * 6.283);
   vec2 mp = uv - rot((rnd(118.0) - 0.5) * 1.2) * vec2(cross * sr * 1.6, 0.0);
   float moon = length(mp) - sr * 0.94;
-  // The dark disc hides what it covers; its own rim stays fine.
-  // The corona: a soft ring that brightens as the cover nears total.
+  // The corona: a soft ring that brightens as the cover nears total. The
+  // dark disc hides what it covers; its own rim stays fine.
   float total = 1.0 - smoothstep(0.0, 0.5, abs(cross));
   sun = min(sun, abs(r - sr * 1.3 - 0.004 * sin(ang * 7.0 + t * 0.6)) - 0.001 * LINE + 0.006 * (1.0 - total));
   d = min(d, max(sun, -moon));
@@ -789,88 +340,6 @@ float eclipse(vec2 uv, float t, float br) {
   vec2 tp = fold(rot(t * spin * 0.5) * uv, ticks);
   d = min(d, sdLine(tp, vec2(R + mr * 2.2, 0.0), vec2(R + mr * 2.2 + 0.012, 0.0), 0.0015 * LINE));
   d = smin(d, arcs(uv, -t, n, R + mr * 2.2 + 0.03, 0.04, 0.6), K * 0.6);
-  return d;
-}
-
-// Spiral: moons winding in from a full one at the rim to a dark one at the
-// heart, waning as they go, the whole spiral turning slowly.
-float spiral(vec2 uv, float t, float br) {
-  float n = 10.0 + 2.0 * floor(rnd(120.0) * 2.0);
-  float turns = mix(1.5, 1.9, rnd(121.0));
-  float dir = rnd(122.0) < 0.5 ? -1.0 : 1.0;
-  float R0 = mix(0.17, 0.185, rnd(123.0)) * br, R1 = 0.03;
-  float r = length(uv);
-  vec2 p = rot(t * dir * 0.015) * uv;
-  float d = 1e9;
-  for (int i = 0; i < 12; i++) {
-    if (float(i) >= n) break;
-    float f = float(i) / (n - 1.0);
-    float a = f * turns * 2.0 * PI;
-    float rad = mix(R0, R1, pow(f, 0.85));
-    vec2 c = rad * vec2(cos(a), sin(a));
-    float mr = mix(0.017, 0.007, f);
-    // Full at the rim, new at the heart, with a nudge from the card's seed.
-    float k = mix(0.5, 0.98, f);
-    d = min(d, moonLit(p - c, mr, k));
-    d = min(d, abs(length(p - c) - mr) - 0.0012 * LINE + 0.001);
-  }
-  // The spiral line itself, hairline, drawn under the moons.
-  float sa = atan(p.y, p.x);
-  float line = 1e9;
-  for (int j = -1; j <= 2; j++) {
-    float aa = sa + float(j) * 2.0 * PI;
-    float f = aa / (turns * 2.0 * PI);
-    if (f < 0.0 || f > 1.0) continue;
-    float rad = mix(R0, R1, pow(f, 0.85));
-    line = min(line, abs(r - rad));
-  }
-  d = min(d, line - 0.001 * LINE + 0.0008);
-  // The dark heart: a fine ring, and a drifting ring of dust round the whole.
-  d = min(d, abs(r - 0.012) - 0.0012 * LINE);
-  d = min(d, length(uv) - 0.003);
-  d = min(d, abs(r - R0 - 0.03 - 0.002 * sin(sa * 6.0 - t * 0.35)) - 0.0012 * LINE + 0.0008);
-  d = min(d, marks(uv, t, 24.0, R0 + 0.048, 0.0, 0.0025));
-  return d;
-}
-
-// Tide: the lunar wheel hanging over water, its moons reflected in broken
-// streaks, the tide rising and falling with the heart moon's phase.
-float tide(vec2 uv, float t, float br) {
-  float n = 6.0 + 2.0 * floor(rnd(130.0) * 2.0);
-  float spin = (rnd(131.0) < 0.5 ? -1.0 : 1.0) * 0.025;
-  float R = mix(0.1, 0.11, rnd(132.0)) * br;
-  float mr = mix(0.014, 0.017, rnd(133.0));
-  float hk = mix(0.08, 0.92, fract(t * 0.008 + rnd(134.0)));
-  // The water rises as the moon fills.
-  float lift = 0.5 - abs(hk - 0.5);
-  float s = -mix(0.14, 0.18, rnd(135.0)) + 0.025 * lift * 2.0;
-  vec2 w = uv - vec2(0.0, 0.085);
-  float r = length(w), ang = atan(w.y, w.x);
-  float near;
-  float d = moonRing(w, t, n, R, mr, spin, rnd(136.0), near);
-  d = min(d, orbit(r, R, near, mr));
-  float big = mix(0.04, 0.048, rnd(137.0)) * br;
-  d = min(d, abs(moonLit(rot(0.3) * w, big, hk)) - 0.003 * LINE);
-  d = min(d, abs(r - big) - 0.0012 * LINE + 0.001);
-  vec2 tp = fold(rot(t * spin * 0.5) * w, 4.0 * n);
-  d = min(d, sdLine(tp, vec2(R + mr * 2.2, 0.0), vec2(R + mr * 2.2 + 0.01, 0.0), 0.0015 * LINE));
-  // Clip the sky to above the waterline.
-  float y = uv.y - s - 0.003 * sin(uv.x * 40.0 + t * 0.8);
-  d = max(d, 0.004 - y);
-
-  // The waterline, and the wheel's reflection cut into drifting streaks.
-  d = min(d, sdTaper(vec2(abs(uv.x), y), vec2(0.0), vec2(0.2, 0.0), 0.0025 * LINE, 0.0005));
-  if (y < 0.0) {
-    float depth = -y;
-    // Foreshortened: the sky is squeezed into the strip of water below it.
-    vec2 m = vec2(uv.x + 0.004 * sin(depth * 70.0 - t * 1.6) * (0.5 + depth * 3.0), s + depth / 0.36) - vec2(0.0, 0.085);
-    float rn;
-    float refl = moonRing(m, t, n, R, mr, spin, rnd(136.0), rn);
-    refl = min(refl, abs(moonLit(rot(0.3) * m, big, hk)) - 0.003 * LINE);
-    refl = min(refl, abs(length(m) - big) - 0.0012 * LINE + 0.001);
-    float band = (abs(fract(depth * 90.0 - t * 0.15) - 0.5) - 0.2) / 90.0;
-    d = min(d, max(refl * 0.36, band) + 0.0012 + depth * 0.02);
-  }
   return d;
 }
 
@@ -892,39 +361,9 @@ void main() {
   } else if (uVariant < 1.5) {
     d = lovers(uv, t, br);
     tint = vec3(0.88, 0.58, 0.52); // rose gold
-  } else if (uVariant < 2.5) {
-    d = star(uv, t, br);
-    tint = vec3(0.68, 0.76, 0.92); // starlight
-  } else if (uVariant < 3.5) {
-    d = water(uv, t, br);
-    tint = vec3(0.68, 0.76, 0.92); // moonlight on water
-  } else if (uVariant < 4.5) {
-    d = moons(uv, t, br);
-    tint = vec3(0.8, 0.8, 0.86); // silver
-  } else if (uVariant < 5.5) {
-    d = mirror(uv, t, br);
-    tint = vec3(0.76, 0.72, 0.92); // glass violet
-  } else if (uVariant < 6.5) {
-    d = threads(uv, t, br);
-    tint = vec3(0.68, 0.76, 0.92); // starlight
-  } else if (uVariant < 7.5) {
-    d = deep(uv, t, br);
-    tint = vec3(0.6, 0.78, 0.9); // deep water
-  } else if (uVariant < 8.5) {
-    d = veil(uv, t, br);
-    tint = vec3(0.9, 0.72, 0.6); // candlelight
-  } else if (uVariant < 9.5) {
-    d = orrery(uv, t, br);
-    tint = vec3(0.8, 0.8, 0.86); // silver
-  } else if (uVariant < 10.5) {
-    d = eclipse(uv, t, br);
-    tint = vec3(0.78, 0.72, 0.64); // pale gold
-  } else if (uVariant < 11.5) {
-    d = spiral(uv, t, br);
-    tint = vec3(0.8, 0.8, 0.86); // silver
   } else {
-    d = tide(uv, t, br);
-    tint = vec3(0.7, 0.78, 0.9); // moonlit water
+    d = star(uv, t, br);
+    tint = vec3(0.78, 0.72, 0.64); // pale gold
   }
   // A whisper of warmth or coolness, so the metal reads slightly differently
   // each card; some are engraved finer or heavier, some glow more softly.
@@ -947,13 +386,11 @@ void main() {
 }
 `
 
-/** The levels' sigils, then Revelation concepts under trial in the sigil lab. */
-export type SigilDesign = Sigil | 'water' | 'moons' | 'mirror' | 'threads' | 'deep' | 'veil' | 'orrery' | 'eclipse' | 'spiral' | 'tide'
-const VARIANTS: SigilDesign[] = ['fool', 'lovers', 'star', 'water', 'moons', 'mirror', 'threads', 'deep', 'veil', 'orrery', 'eclipse', 'spiral', 'tide']
+const VARIANTS: Sigil[] = ['fool', 'lovers', 'star']
 
 export class CardSigil extends ShaderCanvas {
   static properties = { ...ShaderCanvas.properties, sigil: { type: String } }
-  declare sigil: SigilDesign
+  declare sigil: Sigil
 
   protected readonly frag = FRAG
 
