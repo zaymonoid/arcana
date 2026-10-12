@@ -12,11 +12,11 @@ import { ShaderCanvas } from './shader-canvas'
  *
  *   fool   — Perception: a wandering, blinking eye inside the vine sigil
  *   lovers — Connection: two interlocking rings joined by a twisting helix
- *   star   — Revelation: a many-pointed star, rays and a twinkling ring
+ *   star   — Revelation: a wheel of moon phases around an eclipse
  *
  * The card's seed (`uSeed`) varies each design, in its parts as well as its
  * proportions — spoke counts and styles, pupils, hearts, links, rings of
- * marks, crescents, line weight — so no two cards of a level are drawn alike.
+ * marks, moons, line weight — so no two cards of a level are drawn alike.
  */
 
 const FRAG = `
@@ -161,12 +161,6 @@ float marks(vec2 uv, float t, float n, float r, float kind, float size) {
   return sdLine(mp, vec2(-sz, 0.0), vec2(sz, 0.0), 0.002 * LINE);
 }
 
-// A crescent of radius r, open towards +x, drawn in outline.
-float crescent(vec2 p, float r) {
-  float moon = max(length(p) - r, -(length(p - vec2(r * 0.55, 0.0)) - r * 0.85));
-  return abs(moon) - 0.003 * LINE;
-}
-
 // A straight spoke along +x from r0 to r1, tapering, with a bead at its tip.
 float ray(vec2 fp, float r0, float r1) {
   float d = sdTaper(fp, vec2(r0, 0.0), vec2(r1, 0.0), 0.003 * LINE, 0.0008 * LINE);
@@ -276,55 +270,76 @@ float lovers(vec2 uv, float t, float br) {
 }
 
 // ---- The Star: Revelation ----
-// Five to nine points turning either way, a solid, hollow or empty heart,
-// rays of different reach, dots or diamonds ringing it, a crescent sometimes
-// and a scatter of sparkles of its own.
+// A wheel of six or eight moons whose phases turn as it does, around a sun
+// of rays that a moon crosses on a long slow swing: as the cover nears
+// total a corona brightens round it. Ticks and drifting arcs ring the whole.
+// The lit part of a moon of radius r, at phase k: 0 new, 0.5 full, 1 new
+// again; it waxes from the right.
+float moonLit(vec2 p, float r, float k) {
+  float disc = length(p) - r;
+  if (k > 0.5) { p.x = -p.x; k = 1.0 - k; }
+  float e = r * cos(2.0 * PI * k);
+  float xt = e * sqrt(max(0.0, 1.0 - p.y * p.y / (r * r)));
+  return max(disc, xt - p.x);
+}
+
+// A ring of n moons of radius mr on an orbit of radius R, turning at spin,
+// their phases running round the ring from k0. Returns the field, and the
+// distance to the nearest moon's centre in near.
+float moonRing(vec2 uv, float t, float n, float R, float mr, float spin, float k0, out float near) {
+  float d = 1e9;
+  near = 1e9;
+  for (int i = 0; i < 12; i++) {
+    if (float(i) >= n) break;
+    float a = float(i) / n * 2.0 * PI + t * spin;
+    vec2 p = uv - R * vec2(cos(a), sin(a));
+    near = min(near, length(p));
+    float k = fract(float(i) / n + k0);
+    d = min(d, moonLit(p, mr, k));
+    d = min(d, abs(length(p) - mr) - 0.0012 * LINE + 0.001);
+  }
+  return d;
+}
+
+// The orbit line under a ring of moons, broken where it would cross them.
+float orbit(float r, float R, float near, float mr) {
+  return max(abs(r - R) - 0.0012 * LINE, mr * 1.6 - near);
+}
+
 float star(vec2 uv, float t, float br) {
-  float n = 5.0 + floor(rnd(30.0) * 5.0);
-  float spin = (rnd(31.0) < 0.5 ? -1.0 : 1.0) * mix(0.03, 0.06, rnd(32.0));
-  float reach = mix(0.30, 0.37, rnd(33.0));
-  float heart = floor(rnd(34.0) * 3.0);
+  float n = 6.0 + 2.0 * floor(rnd(110.0) * 2.0);
+  float spin = (rnd(111.0) < 0.5 ? -1.0 : 1.0) * 0.025;
+  float R = mix(0.125, 0.135, rnd(112.0)) * br;
+  float mr = mix(0.015, 0.019, rnd(113.0));
   float r = length(uv), ang = atan(uv.y, uv.x);
-  vec2 p = rot(t * spin) * uv;
+  float near;
+  float d = moonRing(uv, t, n, R, mr, spin, rnd(114.0), near);
+  d = min(d, orbit(r, R, near, mr));
 
-  // A many-pointed star. Its points start from +y, so the rays are folded
-  // from a quarter turn round to line up with them.
-  float d = abs(sdStar(p, 0.075 * br, n, 3.0)) - 0.003 * LINE;
-  if (heart < 1.0) d = min(d, sdStar(p, 0.028 * br, n, 3.0));
-  else if (heart < 2.0) d = min(d, abs(sdStar(rot(PI / n) * p, 0.034 * br, n, 3.0)) - 0.0025 * LINE);
-  else d = min(d, length(p) - 0.009);
+  // The sun: a disc and a fan of short and long rays.
+  float sr = mix(0.04, 0.046, rnd(115.0)) * br;
+  float sun = r - sr;
+  float rays = 12.0 + 4.0 * floor(rnd(116.0) * 2.0);
+  vec2 fp = fold(rot(t * 0.02) * uv, rays);
+  sun = min(sun, sdTaper(fp, vec2(sr + 0.008, 0.0), vec2(sr + 0.03, 0.0), 0.002 * LINE, 0.0));
+  vec2 hp = fold(rot(t * 0.02 + PI / rays) * uv, rays);
+  sun = min(sun, sdTaper(hp, vec2(sr + 0.008, 0.0), vec2(sr + 0.018, 0.0), 0.0015 * LINE, 0.0));
 
-  // Long rays from the points, short ones between, tapering to nothing.
-  vec2 fp = fold(warped(rot(PI * 0.5) * p, t), n);
-  d = smin(d, sdTaper(fp, vec2(0.085, 0.0), vec2(reach, 0.0), 0.004 * LINE, 0.0), K);
-  vec2 hp = fold(rot(PI * 0.5 + PI / n) * p, n);
-  if (rnd(35.0) < 0.5) d = smin(d, sdTaper(hp, vec2(0.06, 0.0), vec2(0.15, 0.0), 0.003 * LINE, 0.0), K);
-  else d = smin(d, ray(hp, 0.1, mix(0.17, 0.2, rnd(33.0))), K);
+  // The moon crosses the disc and back on a long slow swing.
+  float cross = sin(t * 0.08 + rnd(117.0) * 6.283);
+  vec2 mp = uv - rot((rnd(118.0) - 0.5) * 1.2) * vec2(cross * sr * 1.6, 0.0);
+  float moon = length(mp) - sr * 0.94;
+  // The corona: a soft ring that brightens as the cover nears total. The
+  // dark disc hides what it covers; its own rim stays fine.
+  float total = 1.0 - smoothstep(0.0, 0.5, abs(cross));
+  sun = min(sun, abs(r - sr * 1.3 - 0.004 * sin(ang * 7.0 + t * 0.6)) - 0.001 * LINE + 0.006 * (1.0 - total));
+  d = min(d, max(sun, -moon));
+  d = min(d, abs(moon) - 0.0015 * LINE);
 
-  // A ring of twinkling marks, and a fine ring outside it.
-  float mk = floor(rnd(36.0) * 3.0);
-  d = min(d, marks(uv, t, n * (4.0 + floor(rnd(32.0) * 2.0)), 0.19 * br, mk, 0.0035));
-  d = min(d, abs(r - (0.215 * br + 0.003 * sin(ang * 6.0 - t * 0.35))) - 0.002 * LINE);
-
-  // Drifting arcs between the rays.
-  d = smin(d, arcs(uv, t, n, 0.125 * br, 0.06, 0.6), K * 0.6);
-
-  // Now and then a crescent hangs in a corner, above or below, open outwards.
-  if (rnd(37.0) < 0.45) {
-    float side = rnd(38.0) < 0.5 ? -1.0 : 1.0;
-    vec2 mp = rot(-side * 0.9) * (uv - vec2(0.105, side * 0.255 + 0.006 * sin(t * 0.3)));
-    d = min(d, crescent(mp, 0.028));
-  }
-
-  // Four-pointed sparkles scattered above and below, in this card's own number and places.
-  float count = 4.0 + floor(rnd(39.0) * 7.0);
-  for (int i = 0; i < 10; i++) {
-    if (float(i) >= count) break;
-    float fi = float(i) + 9.0 * uSeed;
-    vec2 pos = vec2(hash(vec2(fi, 1.0)) * 0.3 - 0.15, (0.225 + 0.08 * hash(vec2(fi, 2.0))) * (mod(float(i), 2.0) * 2.0 - 1.0));
-    float size = 0.004 + 0.012 * pow(0.5 + 0.5 * sin(t * 0.9 + fi * 2.3), 3.0);
-    d = min(d, sdStar(uv - pos, size, 4.0, 2.3));
-  }
+  float ticks = 4.0 * n;
+  vec2 tp = fold(rot(t * spin * 0.5) * uv, ticks);
+  d = min(d, sdLine(tp, vec2(R + mr * 2.2, 0.0), vec2(R + mr * 2.2 + 0.012, 0.0), 0.0015 * LINE));
+  d = smin(d, arcs(uv, -t, n, R + mr * 2.2 + 0.03, 0.04, 0.6), K * 0.6);
   return d;
 }
 
@@ -348,7 +363,7 @@ void main() {
     tint = vec3(0.88, 0.58, 0.52); // rose gold
   } else {
     d = star(uv, t, br);
-    tint = vec3(0.68, 0.76, 0.92); // starlight
+    tint = vec3(0.78, 0.72, 0.64); // pale gold
   }
   // A whisper of warmth or coolness, so the metal reads slightly differently
   // each card; some are engraved finer or heavier, some glow more softly.
