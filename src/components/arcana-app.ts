@@ -76,9 +76,6 @@ export class ArcanaApp extends LitElement {
     return html`
       <header class="fade-in mt-2 flex flex-col items-center text-center">
         <h1 class="mt-6 font-display text-6xl font-semibold tracking-[-0.02em] text-gold">Arcana</h1>
-        <p class="mt-2 max-w-[19rem] text-base leading-snug text-parchment/70">
-          Questions for getting to know each other. One phone, passed around the circle.
-        </p>
         <div class="seat-ring mt-6" aria-hidden="true">
           <div class="seat-orbit"></div>
           <div class="seat-halo"></div>
