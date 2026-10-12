@@ -106,10 +106,7 @@ export class ArcanaApp extends LitElement {
         : nothing}
 
       <section class="fade-in mt-8">
-        <div class="mb-3 flex items-baseline justify-between">
-          <h2 class="font-display text-2xl font-semibold text-parchment">The circle</h2>
-          <p class="text-sm text-parchment/50">Clockwise, in seating order</p>
-        </div>
+        <h2 class="mb-3 font-display text-2xl font-semibold text-parchment">The circle</h2>
         <ol class="space-y-2">
           ${v.names.map(
             (name, index) => html`
