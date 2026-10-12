@@ -168,7 +168,7 @@ export class ArcanaApp extends LitElement {
                 <span class="flex gap-1">
                   ${Array.from({ length: l.rounds }, () => html`<span class="h-2 w-2 rotate-45 bg-current"></span>`)}
                 </span>
-                <span class="mt-auto font-display text-xl font-semibold">${l.label}</span>
+                <span class="mt-auto font-display text-lg leading-tight font-semibold">${l.label}</span>
                 <span class="text-sm opacity-70">${l.hint}</span>
               </button>
             `,

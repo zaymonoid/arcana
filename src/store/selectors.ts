@@ -43,7 +43,7 @@ export const selectSetup = (s: State) => {
     duplicate: R.duplicateName(names),
     canStart: R.canStart(names),
     lengths: LENGTHS.map((l) => ({ ...l, rounds: R.ROUNDS[l.id], selected: l.id === length })),
-    summary: `${rounds} ${rounds === 1 ? 'round' : 'rounds'} per level · three levels · ${R.PASSES_PER_PLAYER} passes each`,
+    summary: `${rounds} ${rounds === 1 ? 'round' : 'rounds'} per level · three levels`,
     saved: s.saved
       ? { levelTitle: LEVELS[Math.min(s.saved.level, LEVELS.length - 1)].title, players: s.saved.players.length }
       : null,
