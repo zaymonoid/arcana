@@ -11,6 +11,8 @@ export const ROUNDS: Record<Length, number> = { quick: 1, standard: 2, deep: 3 }
 export const PASSES_PER_PLAYER = 3
 export const WILDCARD_CHANCE = 1 / 8
 export const OBLIQUE_CHANCE = 1 / 12
+/** Wildcards are light and playful, so they stay in the first level (The Fool). */
+export const WILDCARD_UNTIL_LEVEL = 0
 /** Oblique cards wait until the group has warmed up (The Lovers onward). */
 export const OBLIQUE_FROM_LEVEL = 1
 export const MAX_PLAYERS = 10
@@ -145,10 +147,10 @@ export function draw(g: Game, rolls: Rolls, exclude?: string): { card: DrawnCard
  */
 export const needsTarget = (prompt: Prompt) => prompt.kind === 'self' || prompt.text.includes('{name}')
 
-/** Wildcards at any level; obliques only once the group has warmed up. */
+/** Wildcards only in the shallow first level; obliques only once the group has warmed up. */
 function suitFor(g: Game, roll: number): Suit {
-  if (roll < WILDCARD_CHANCE) return 'wild'
-  if (g.level >= OBLIQUE_FROM_LEVEL && roll < WILDCARD_CHANCE + OBLIQUE_CHANCE) return 'oblique'
+  if (g.level <= WILDCARD_UNTIL_LEVEL && roll < WILDCARD_CHANCE) return 'wild'
+  if (g.level >= OBLIQUE_FROM_LEVEL && roll < OBLIQUE_CHANCE) return 'oblique'
   return 'level'
 }
 
