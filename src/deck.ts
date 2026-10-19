@@ -1,18 +1,37 @@
 /**
- * The deck. `{name}` marks a card that is about another player — the game
- * fills it in with a fairly rotated target.
+ * The deck. `{name}` marks a card that names another player — the game
+ * fills it in with a fairly rotated target. Every card except a group card
+ * has a target, and it's never the drawer.
  *
- * Kinds decide who speaks. Nobody answers their own draw:
- *   guess — the active player guesses about the target, who then reveals the truth
- *   self  — a question about "you": the drawer reads it to the target, who answers
- *   ask   — the active player speaks to (or asks) the target
+ * A card's kind is how it's played:
+ *   guess — the drawer guesses about the target, who then reveals the truth
+ *   read  — a question about "you": the drawer reads it to the target, who answers
+ *   ask   — the drawer asks the target something, and the target answers
+ *   tell  — the drawer says something to the target
+ *   pair  — the drawer and the target do it together
  *   group — everyone takes part
  */
-export type Kind = 'guess' | 'self' | 'ask' | 'group'
+export type Kind = 'guess' | 'read' | 'ask' | 'tell' | 'pair' | 'group'
+
+/**
+ * Who a card puts in the spotlight: the drawer (`self`), the player it's
+ * read to (`other`), or nobody in particular (`shared`).
+ */
+export type Subject = 'self' | 'other' | 'shared'
+
+export const SUBJECT: Record<Kind, Subject> = {
+  guess: 'other',
+  read: 'other',
+  ask: 'other',
+  tell: 'self',
+  pair: 'shared',
+  group: 'shared',
+}
 
 export interface Prompt {
   id: string
   kind: Kind
+  subject: Subject
   text: string
 }
 
@@ -80,7 +99,7 @@ export const FINALE: Arcanum = {
 }
 
 const mk = (prefix: string, kind: Kind, texts: string[]): Prompt[] =>
-  texts.map((text, i) => ({ id: `${prefix}-${kind}-${i}`, kind, text }))
+  texts.map((text, i) => ({ id: `${prefix}-${kind}-${i}`, kind, subject: SUBJECT[kind], text }))
 
 const perception = mk('I', 'guess', [
   'What do you think {name} was like at fifteen?',
@@ -124,7 +143,7 @@ const perception = mk('I', 'guess', [
 ])
 
 const connection = [
-  ...mk('II', 'self', [
+  ...mk('II', 'read', [
     "What's something you've changed your mind about in the last year?",
     'When did you last feel truly proud of yourself?',
     'What compliment have you received that you still think about?',
@@ -158,18 +177,20 @@ const connection = [
 ]),
   ...mk('II', 'ask', [
     "Ask {name} a question you've wanted to ask but haven't.",
-    'What do you think you and {name} have in common that nobody would notice?',
     "Ask {name}: what's been on your mind lately?",
+    "Ask {name} what they'd want this group to argue about on their behalf.",
+  ]),
+  ...mk('II', 'tell', [
+    'What do you think you and {name} have in common that nobody would notice?',
     'What would you most want to learn from {name}?',
     'What do you think {name} needs to hear right now?',
     'Tell {name} about a moment you felt you understood them better.',
-      "Tell {name} something you've assumed about them without ever checking.",
-    "Ask {name} what they'd want this group to argue about on their behalf.",
-]),
+    "Tell {name} something you've assumed about them without ever checking.",
+  ]),
 ]
 
 const revelation = [
-  ...mk('III', 'self', [
+  ...mk('III', 'read', [
     "What's something you've never fully forgiven yourself for?",
     'When have you felt most alone, and what got you through it?',
     'What do you think you will regret most if nothing changes?',
@@ -203,18 +224,20 @@ const revelation = [
     'Who here reminds you of someone important in your life, and why?',
   ]),
   ...mk('III', 'ask', [
-    "Tell {name} something you admire about them that you've never said out loud.",
     "Ask {name}: what's the hardest thing you're dealing with right now that most people don't know about?",
-    'Tell {name} what you think they are more capable of than they believe.',
     'Ask {name}: what do you need from the people in this room?',
-    "Tell {name} what you think they carry that they don't talk about. They may confirm, deny or stay silent.",
     "Ask {name}: what's something you're afraid to want?",
     'Ask {name} who they would call at 3am, and why that person.',
-    'Tell {name} what you hope for them in the next year.',
     'Ask {name}: what part of your life feels unfinished?',
     'Ask {name}: what would you change about how you were loved as a child?',
-    'What do you think {name} is about to grow into? Tell them.',
     "Ask {name}: when did you last feel proud of who you are, not what you've done?",
+  ]),
+  ...mk('III', 'tell', [
+    "Tell {name} something you admire about them that you've never said out loud.",
+    'Tell {name} what you think they are more capable of than they believe.',
+    "Tell {name} what you think they carry that they don't talk about. They may confirm, deny or stay silent.",
+    'Tell {name} what you hope for them in the next year.',
+    'What do you think {name} is about to grow into? Tell them.',
   ]),
 ]
 
@@ -240,8 +263,8 @@ export const WILDCARDS: Prompt[] = [
     "Everyone names the group's collective weakness. Vote on the winner.",
     'On three, everyone points to who would be the hardest to buy a present for.',
 ]),
-  ...mk('W', 'ask', [
-    'Ask {name} any question you like. They may pass for free.',
+  ...mk('W', 'ask', ['Ask {name} any question you like. They may pass for free.']),
+  ...mk('W', 'pair', [
     'Hold eye contact with {name} for ten seconds. No talking.',
     'Give {name} a genuine compliment — then they give one back.',
   ]),
@@ -253,7 +276,7 @@ export const WILDCARDS: Prompt[] = [
  * (The Lovers onward).
  */
 export const OBLIQUES: Prompt[] = [
-  ...mk('O', 'self', [
+  ...mk('O', 'read', [
     'Describe the person you were ten years ago as if they were a stranger you once met.',
     'Take the quality you like least in yourself. Where has it served you well?',
     'Describe what you want without naming it. Give its outline, its weight, its colour.',
@@ -261,10 +284,10 @@ export const OBLIQUES: Prompt[] = [
     'Describe the place you grew up through one smell, one sound and one rule.',
     "Name something you've been calling a preference that is actually a fear.",
 ]),
-  ...mk('O', 'ask', [
+  ...mk('O', 'tell', [
     'Say what you think {name} finds hardest to say out loud. They may confirm, deny or stay silent.',
-    'Reverse: {name} tells you what they think you need to hear right now.',
   ]),
+  ...mk('O', 'ask', ['Reverse: {name} tells you what they think you need to hear right now.']),
   ...mk('O', 'group', [
     'Go around: name one person, not here, who helped make you who you are — and something you never thanked them for.',
   ]),

@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:soak": "FC_RUNS=5000 vitest run --testTimeout=0"
   },
   "repository": {
     "type": "git",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "fast-check": "^4.10.2",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vite": "^6.4.4",

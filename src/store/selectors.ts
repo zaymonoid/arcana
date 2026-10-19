@@ -165,6 +165,7 @@ export const selectDebugDump = (s: State) => {
         target: name(e.card.target),
         suit: e.card.suit,
         kind: e.card.prompt.kind,
+        subject: e.card.prompt.subject,
         id: e.card.prompt.id,
         text: e.card.prompt.text.replaceAll('{name}', name(e.card.target) ?? 'someone'),
         redraw: e.card.redraw,
@@ -199,9 +200,13 @@ function instruction(kind: Kind, target: string | null): TextPart[] {
   switch (kind) {
     case 'guess':
       return [{ text: 'You guess — then ', name: false }, t, { text: ' reveals how close you got.', name: false }]
-    case 'self':
+    case 'read':
       return [{ text: 'Read it to ', name: false }, t, { text: ' — they answer.', name: false }]
     case 'ask':
+      return [{ text: 'Put it to ', name: false }, t, { text: ' — they answer.', name: false }]
+    case 'tell':
+      return [{ text: 'You speak — ', name: false }, t, { text: ' listens.', name: false }]
+    case 'pair':
       return [{ text: 'This one is between you and ', name: false }, t, { text: '.', name: false }]
     case 'group':
       return [{ text: 'Everyone plays.', name: false }]

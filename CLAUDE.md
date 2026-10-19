@@ -12,5 +12,5 @@ All logic lives in the katha store (`src/store/`). **Components only dispatch ac
 
 ## Commands
 
-- `npm test`: vitest store tests
+- `npm test`: vitest store tests. Randomised tests are fast-check properties over dice (`Rolls`), never `Math.random()` loops; `npm run test:soak` runs 5000 cases each.
 - `npm run build`: `tsc --noEmit` + vite build. Must pass before committing.
