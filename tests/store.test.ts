@@ -37,10 +37,9 @@ fc.configureGlobal({ numRuns: Number(import.meta.env.FC_RUNS) || 100 })
  * which finds corner cases but makes nearly every suit roll a wildcard, so
  * half the rolls are uniform like real play.
  */
-const roll = fc.oneof(
-  fc.double({ min: 0, max: 1, maxExcluded: true, noNaN: true }),
-  fc.noBias(fc.integer({ min: 0, max: 0xffffffff })).map((x) => x / 0x100000000),
-)
+/** Dice as in real play, for checking how things are distributed. */
+const uniformRoll = fc.noBias(fc.integer({ min: 0, max: 0xffffffff })).map((x) => x / 0x100000000)
+const roll = fc.oneof(fc.double({ min: 0, max: 1, maxExcluded: true, noNaN: true }), uniformRoll)
 const rolls = fc.tuple(roll, roll, roll)
 const length = fc.constantFrom<Game['length']>('quick', 'standard', 'deep')
 /** One tap's worth of choices: the dice for a deal, and whether to pass on the card. */
@@ -221,6 +220,28 @@ describe('rules', () => {
         expect(play(n, len, taps).game).toEqual(play(n, len, taps).game)
       }),
     ))
+
+  // Optimal, but not deterministic: among equally good targets the dice decide, with no seat favoured.
+  it('picks the first target evenly among everyone else', () => {
+    for (let n = 3; n <= 10; n++) {
+      const s = reduce(started(names(n)), { id: 'level/begin' })
+      const runs = 4000
+      const counts = new Array<number>(n).fill(0)
+      for (const r of fc.sample(uniformRoll, { numRuns: runs, seed: n })) counts[R.draw(s.game!, [0.9, 0, r]).card.target!]++
+      expect(counts[0]).toBe(0)
+      for (const c of counts.slice(1)) expect(Math.abs(c / runs - 1 / (n - 1))).toBeLessThan(0.04)
+    }
+  })
+
+  it('varies the pairings from game to game', () => {
+    const plays = fc.sample(steps, { numRuns: 50, seed: 3 }).map((taps) =>
+      play(5, 'standard', taps)
+        .game!.log.filter((e) => e.outcome === 'answered')
+        .map((e) => `${e.drawer}>${e.card.target}`)
+        .join(' '),
+    )
+    expect(new Set(plays).size).toBeGreaterThan(40)
+  })
 
   it('shuffles every card into a pile exactly once', () =>
     fc.assert(

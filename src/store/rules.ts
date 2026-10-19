@@ -182,15 +182,20 @@ function refill(pile: readonly string[], pool: readonly Prompt[], passing: strin
   return [...pile, ...shuffle(discards, roll), ...bottom]
 }
 
-/** A seeded Fisher–Yates shuffle (mulberry32), so a single roll decides the whole order. */
-export function shuffle<T>(xs: readonly T[], roll: number): T[] {
+/** A stream of uniform numbers in [0, 1) seeded by one roll (mulberry32), so one roll can decide many things. */
+export function seeded(roll: number): () => number {
   let a = Math.floor(roll * 0x100000000) >>> 0
-  const next = () => {
+  return () => {
     a = (a + 0x6d2b79f5) >>> 0
     let t = Math.imul(a ^ (a >>> 15), a | 1)
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
     return ((t ^ (t >>> 14)) >>> 0) / 0x100000000
   }
+}
+
+/** A seeded Fisher–Yates shuffle, so a single roll decides the whole order. */
+export function shuffle<T>(xs: readonly T[], roll: number): T[] {
+  const next = seeded(roll)
   const out = [...xs]
   for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(next() * (i + 1))
@@ -263,27 +268,30 @@ const suitsAt = (g: Game): Suit[] => [
  *      keeps landing on the same person. A repeat costs more the more often
  *      that pair has already met.
  * Only the active player's target is used; the plan is redone every draw.
- * Ties are broken by the roll.
+ *
+ * Every cost is a whole number, so the roll adds a little noise to each —
+ * under 1 across a whole plan, too little to ever beat a cheaper one. The
+ * plan is always one of the cheapest, and which one is down to the dice
+ * rather than the order the algorithm happens to try them in.
  */
 function pickTarget(g: Game, roll: number): number {
   const n = g.players.length
   const turnsLeft = n - 1 - (g.turnsInLevel % n)
   const drawers = Array.from({ length: turnsLeft + 1 }, (_, i) => (g.current + i) % n)
-  const targets = shuffle(
-    g.players.map((_, i) => i),
-    roll,
-  )
   const least = Math.min(...g.players.map((p) => p.askedAbout))
   const paired = pairings(g)
+  const noise = seeded(roll)
   const cost = drawers.map((d) =>
-    targets.map((t) =>
-      t === d ? SELF : (g.players[t].askedAbout - least) * ASKED + REPEAT ** Math.min(paired[d][t], 8),
+    g.players.map((p, t) =>
+      t === d
+        ? SELF
+        : (p.askedAbout - least) * ASKED + REPEAT ** Math.min(paired[d][t], 8) + noise() / drawers.length,
     ),
   )
-  return targets[assign(cost)[0]]
+  return assign(cost)[0]
 }
 
-/** Assignment costs, scaled so each rule always outweighs the ones after it. */
+/** Assignment costs, whole numbers scaled so each rule always outweighs the ones after it. */
 const REPEAT = 4
 const ASKED = 1e7
 const SELF = 1e10
@@ -302,7 +310,7 @@ export function pairings(g: Game): number[][] {
 /**
  * Minimum-cost assignment of rows to distinct columns (the Hungarian
  * algorithm, O(rows² × columns)); needs rows ≤ columns. Returns each row's
- * column. Among equal-cost assignments, earlier columns win.
+ * column.
  */
 export function assign(cost: readonly (readonly number[])[]): number[] {
   const rows = cost.length
