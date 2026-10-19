@@ -254,25 +254,103 @@ const suitsAt = (g: Game): Suit[] => [
 ]
 
 /**
- * Fair rotation: whoever has been asked about least (never the active
- * player). Ties go to players whose own turn is still to come this round —
- * they can't be asked on that turn, so they have fewer chances left.
+ * Fair rotation, planned a round at a time. Every drawer left this round
+ * (the active player first) gets a different target, never themselves, and
+ * the plan that costs least wins:
+ *   1. whoever has been asked about least comes first, so everyone is asked
+ *      about equally by the end of each round;
+ *   2. then pairs who have shared fewest cards, either way round, so nobody
+ *      keeps landing on the same person. A repeat costs more the more often
+ *      that pair has already met.
+ * Only the active player's target is used; the plan is redone every draw.
+ * Ties are broken by the roll.
  */
 function pickTarget(g: Game, roll: number): number {
   const n = g.players.length
   const turnsLeft = n - 1 - (g.turnsInLevel % n)
-  const upcoming = (i: number) => {
-    const ahead = (i - g.current + n) % n
-    return ahead >= 1 && ahead <= turnsLeft
-  }
-  const others = g.players.map((_, i) => i).filter((i) => i !== g.current)
-  const least = Math.min(...others.map((i) => g.players[i].askedAbout))
-  const fewest = others.filter((i) => g.players[i].askedAbout === least)
-  const urgent = fewest.filter(upcoming)
-  return pick(urgent.length ? urgent : fewest, roll)
+  const drawers = Array.from({ length: turnsLeft + 1 }, (_, i) => (g.current + i) % n)
+  const targets = shuffle(
+    g.players.map((_, i) => i),
+    roll,
+  )
+  const least = Math.min(...g.players.map((p) => p.askedAbout))
+  const paired = pairings(g)
+  const cost = drawers.map((d) =>
+    targets.map((t) =>
+      t === d ? SELF : (g.players[t].askedAbout - least) * ASKED + REPEAT ** Math.min(paired[d][t], 8),
+    ),
+  )
+  return targets[assign(cost)[0]]
 }
 
-const pick = <T>(xs: readonly T[], roll: number): T => xs[Math.min(Math.floor(roll * xs.length), xs.length - 1)]
+/** Assignment costs, scaled so each rule always outweighs the ones after it. */
+const REPEAT = 4
+const ASKED = 1e7
+const SELF = 1e10
+
+/** How many answered cards each pair of players has shared, either way round, from the log. */
+export function pairings(g: Game): number[][] {
+  const counts = g.players.map(() => g.players.map(() => 0))
+  for (const e of g.log) {
+    if (e.outcome !== 'answered' || e.card.target === null) continue
+    counts[e.drawer][e.card.target]++
+    counts[e.card.target][e.drawer]++
+  }
+  return counts
+}
+
+/**
+ * Minimum-cost assignment of rows to distinct columns (the Hungarian
+ * algorithm, O(rows² × columns)); needs rows ≤ columns. Returns each row's
+ * column. Among equal-cost assignments, earlier columns win.
+ */
+export function assign(cost: readonly (readonly number[])[]): number[] {
+  const rows = cost.length
+  const cols = cost[0].length
+  const u = new Array<number>(rows + 1).fill(0)
+  const v = new Array<number>(cols + 1).fill(0)
+  const owner = new Array<number>(cols + 1).fill(0) // 1-based row holding each column; column 0 is a sentinel
+  const way = new Array<number>(cols + 1).fill(0)
+  for (let row = 1; row <= rows; row++) {
+    owner[0] = row
+    let j0 = 0
+    const minv = new Array<number>(cols + 1).fill(Infinity)
+    const used = new Array<boolean>(cols + 1).fill(false)
+    do {
+      used[j0] = true
+      const i0 = owner[j0]
+      let delta = Infinity
+      let j1 = 0
+      for (let j = 1; j <= cols; j++) {
+        if (used[j]) continue
+        const reduced = cost[i0 - 1][j - 1] - u[i0] - v[j]
+        if (reduced < minv[j]) {
+          minv[j] = reduced
+          way[j] = j0
+        }
+        if (minv[j] < delta) {
+          delta = minv[j]
+          j1 = j
+        }
+      }
+      for (let j = 0; j <= cols; j++) {
+        if (used[j]) {
+          u[owner[j]] += delta
+          v[j] -= delta
+        } else minv[j] -= delta
+      }
+      j0 = j1
+    } while (owner[j0] !== 0)
+    do {
+      const j1 = way[j0]
+      owner[j0] = owner[j1]
+      j0 = j1
+    } while (j0)
+  }
+  const out = new Array<number>(rows).fill(-1)
+  for (let j = 1; j <= cols; j++) if (owner[j]) out[owner[j] - 1] = j - 1
+  return out
+}
 
 // ---------- Setup ----------
 
