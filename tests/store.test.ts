@@ -1,6 +1,8 @@
 import { makeStore } from '@zaymonoid/katha'
 import { Effect } from 'effect'
+import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
+import { DECK, OBLIQUES, type Prompt, SUBJECT, WILDCARDS } from '../src/deck'
 import { rootProcess } from '../src/store/processes'
 import { reducer } from '../src/store/reducer'
 import * as R from '../src/store/rules'
@@ -11,9 +13,85 @@ const reduce = (state: State, ...actions: Action[]) => actions.reduce((s, a) => 
 const started = (names = ['A', 'B', 'C'], length: Game['length'] = 'quick') =>
   reduce(initialState, { id: 'game/started', data: { names, length, startedAt: 0 } })
 const dealt = (s: State, rolls: R.Rolls = [0.9, 0, 0]) => {
-  const { card, used } = R.draw(s.game!, rolls)
-  return reduce(s, { id: 'card/dealt', data: { card, used, isPass: false } })
+  const { card, piles } = R.draw(s.game!, rolls)
+  return reduce(s, { id: 'card/dealt', data: { card, piles, isPass: false } })
 }
+const passed = (s: State, rolls: R.Rolls = [0.9, 0.5, 0]) => {
+  const { card, piles } = R.draw(s.game!, rolls)
+  return reduce(s, { id: 'card/dealt', data: { card, piles, isPass: true } })
+}
+/** Put a particular prompt on the table, with the target the rules would pick. */
+const dealtPrompt = (s: State, prompt: Prompt) => {
+  const { card, piles } = R.draw(s.game!, [0.9, 0, 0])
+  return reduce(s, { id: 'card/dealt', data: { card: { ...card, prompt }, piles, isPass: false } })
+}
+const names = (n: number) => Array.from({ length: n }, (_, i) => `P${i}`)
+
+// ---------- fast-check arbitraries ----------
+
+// `npm run test:soak` for 5000 cases per property; 100 otherwise.
+fc.configureGlobal({ numRuns: Number(import.meta.env.FC_RUNS) || 100 })
+
+/**
+ * A die in [0, 1). fast-check leans towards edge values (0, tiny doubles),
+ * which finds corner cases but makes nearly every suit roll a wildcard, so
+ * half the rolls are uniform like real play.
+ */
+/** Dice as in real play, for checking how things are distributed. */
+const uniformRoll = fc.noBias(fc.integer({ min: 0, max: 0xffffffff })).map((x) => x / 0x100000000)
+const roll = fc.oneof(fc.double({ min: 0, max: 1, maxExcluded: true, noNaN: true }), uniformRoll)
+const rolls = fc.tuple(roll, roll, roll)
+const length = fc.constantFrom<Game['length']>('quick', 'standard', 'deep')
+/** One tap's worth of choices: the dice for a deal, and whether to pass on the card. */
+const step = fc.record({ rolls, pass: fc.boolean() })
+/** Long enough to play a deep game through to the end; `size: 'max'` stops fast-check biasing towards short games. */
+const steps = fc.array(step, { maxLength: 250, size: 'max' })
+/** Dice that always deal from the level's own pile, never a wildcard or oblique. */
+const levelRolls = fc.tuple(fc.double({ min: 0.5, max: 1, maxExcluded: true, noNaN: true }), roll, roll)
+
+/**
+ * Play a game through from the first level to the closing card (or until the
+ * steps run out), passing whenever a step says to and the player can. Calls
+ * `check` after every tap.
+ */
+function play(
+  players: number,
+  len: Game['length'],
+  taps: readonly { rolls: R.Rolls; pass: boolean }[],
+  check: (s: State) => void = () => {},
+): State {
+  let s = started(names(players), len)
+  for (const t of taps) {
+    const g = s.game!
+    if (g.phase === 'closing') break
+    if (g.phase === 'level') s = reduce(s, { id: 'level/begin' })
+    else if (g.phase === 'handoff') s = dealt(s, t.rolls)
+    else if (t.pass && R.canPass(g)) s = passed(s, t.rolls)
+    else s = reduce(s, { id: 'card/done' })
+    check(s)
+  }
+  return s
+}
+
+/** The pile a log entry was dealt from, and how many cards that pile holds. */
+const poolSize = (pile: string) =>
+  pile === 'wild' ? WILDCARDS.length : pile === 'oblique' ? OBLIQUES.length : DECK[Number(pile.slice(6))].length
+
+describe('deck', () => {
+  const all = [...DECK.flat(), ...WILDCARDS, ...OBLIQUES]
+
+  it('gives every card a unique id and the subject its kind implies', () => {
+    expect(new Set(all.map((p) => p.id)).size).toBe(all.length)
+    for (const p of all) expect(p.subject, p.text).toBe(SUBJECT[p.kind])
+  })
+
+  it('names someone on every card that has a target, and only those', () => {
+    for (const p of all) {
+      if (p.kind === 'read' || p.kind === 'group') expect(p.text, p.text).not.toContain('{name}')
+      else expect(p.text, p.text).toContain('{name}')
+    }
+  })
+})
 
 describe('rules', () => {
   it('targets whoever has been asked about least, never the active player', () => {
@@ -28,22 +106,20 @@ describe('rules', () => {
     expect(new Set(asked).size).toBe(3)
   })
 
-  it('asks about everyone equally each round, whatever the dice', () => {
-    for (let n = 2; n <= 10; n++) {
-      for (let trial = 0; trial < 50; trial++) {
-        const names = Array.from({ length: n }, (_, i) => `P${i}`)
-        let s = reduce(started(names, 'deep'), { id: 'level/begin' })
-        for (let turn = 1; turn <= n * 3; turn++) {
-          s = dealt(s, [0.9, Math.random(), Math.random()])
-          s = reduce(s, { id: 'card/done' })
-          if (turn % n === 0) {
+  // Group wildcards have no target, so this holds for the level's own cards.
+  it('asks about everyone equally each round, whatever the dice', () =>
+    fc.assert(
+      fc.property(fc.integer({ min: 2, max: 10 }), fc.array(levelRolls, { minLength: 30, maxLength: 30 }), (n, dice) => {
+        let s = reduce(started(names(n), 'deep'), { id: 'level/begin' })
+        for (const [turn, r] of dice.slice(0, n * 3).entries()) {
+          s = reduce(dealt(s, r), { id: 'card/done' })
+          if ((turn + 1) % n === 0) {
             const counts = s.game!.players.map((p) => p.askedAbout)
             expect(Math.max(...counts) - Math.min(...counts)).toBe(0)
           }
         }
-      }
-    }
-  })
+      }),
+    ))
 
   it('advances levels after rounds × players turns, then closes', () => {
     let s = reduce(started(['A', 'B']), { id: 'level/begin' })
@@ -69,40 +145,129 @@ describe('rules', () => {
     s = reduce(s, { id: 'level/begin' })
     expect(s.game!.level).toBe(2)
     expect(R.draw(s.game!, [0, 0, 0]).card.suit).toBe('oblique')
-    const turn = S.selectTurn(reduce(s, { id: 'card/dealt', data: { card: oblique, used: [], isPass: false } }))
+    const turn = S.selectTurn(reduce(s, { id: 'card/dealt', data: { card: oblique, piles: {}, isPass: false } }))
     expect(turn!.card!.arcanum.title).toBe('The Hanged Man')
     expect(turn!.heading.map((p) => p.text).join('')).toBe('Your oblique card, A')
   })
 
-  it('never has the drawer answer their own card', () => {
-    for (let n = 2; n <= 4; n++) {
-      const names = Array.from({ length: n }, (_, i) => `P${i}`)
-      let s = reduce(started(names, 'deep'), { id: 'level/begin' })
-      for (let turn = 0; turn < n * 3; turn++) {
-        s = dealt(s, [0.9, Math.random(), Math.random()])
-        const { card, current } = s.game!
-        if (card!.prompt.kind !== 'group') {
-          expect(card!.target).not.toBeNull()
-          expect(card!.target).not.toBe(current)
+  it('names someone other than the drawer on every card but a group card', () =>
+    fc.assert(
+      fc.property(fc.integer({ min: 2, max: 10 }), length, steps, (n, len, taps) => {
+        play(n, len, taps, (s) => {
+          const { card, current } = s.game!
+          if (!card) return
+          if (card.prompt.kind === 'group') expect(card.target).toBeNull()
+          else expect(card.target).not.toBe(current)
+          expect(card.target === null || card.target < n).toBe(true)
+        })
+      }),
+    ))
+
+  it('keeps the spotlight even in a two-player game: nobody in it three times running', () =>
+    fc.assert(
+      fc.property(length, steps, (len, taps) => {
+        const s = play(2, len, taps, (s) => {
+          const [a, b] = R.spotlights(s.game!)
+          expect(Math.abs(a - b)).toBeLessThanOrEqual(1)
+        })
+        const order = s.game!.log
+          .filter((e) => e.outcome === 'answered')
+          .map((e) => R.spotlit(e.card.prompt.subject, e.drawer, e.card.target))
+          .filter((who) => who !== null)
+        for (let i = 2; i < order.length; i++) expect(new Set(order.slice(i - 2, i + 1)).size).toBeGreaterThan(1)
+      }),
+    ))
+
+  // Strict alternation would starve these: each one hands the spotlight back the same way.
+  it('still deals cards the drawer answers in two-player games', () => {
+    const games = fc.sample(steps.map((taps) => play(2, 'deep', taps).game!), { numRuns: 100, seed: 1 })
+    const tells = games.flatMap((g) => g.log.filter((e) => e.outcome === 'answered' && e.card.prompt.subject === 'self'))
+    expect(tells.length).toBeGreaterThan(0)
+  })
+
+  it('deals every card in a pile before any comes round again, with three or more players', () =>
+    fc.assert(
+      fc.property(fc.integer({ min: 3, max: 10 }), length, steps, (n, len, taps) => {
+        const byPile = new Map<string, string[]>()
+        for (const e of play(n, len, taps).game!.log) {
+          const pile = e.card.suit === 'level' ? `level-${e.level}` : e.card.suit
+          byPile.set(pile, [...(byPile.get(pile) ?? []), e.card.prompt.id])
         }
-        s = reduce(s, { id: 'card/done' })
-      }
+        for (const [pile, ids] of byPile) {
+          const size = poolSize(pile)
+          for (let i = 0; i < ids.length; i += size) {
+            const run = ids.slice(i, i + size)
+            expect(new Set(run).size).toBe(run.length)
+          }
+        }
+      }),
+    ))
+
+  it('never deals the card being passed straight back', () =>
+    fc.assert(
+      fc.property(fc.integer({ min: 2, max: 10 }), length, steps, (n, len, taps) => {
+        play(n, len, taps, (s) => {
+          const log = s.game!.log
+          const last = log.at(-1)
+          if (last?.card.redraw) expect(last.card.prompt.id).not.toBe(log.at(-2)!.card.prompt.id)
+        })
+      }),
+    ))
+
+  it('is a pure function of the dice', () =>
+    fc.assert(
+      fc.property(fc.integer({ min: 2, max: 10 }), length, steps, (n, len, taps) => {
+        expect(play(n, len, taps).game).toEqual(play(n, len, taps).game)
+      }),
+    ))
+
+  // Optimal, but not deterministic: among equally good targets the dice decide, with no seat favoured.
+  it('picks the first target evenly among everyone else', () => {
+    for (let n = 3; n <= 10; n++) {
+      const s = reduce(started(names(n)), { id: 'level/begin' })
+      const runs = 4000
+      const counts = new Array<number>(n).fill(0)
+      for (const r of fc.sample(uniformRoll, { numRuns: runs, seed: n })) counts[R.draw(s.game!, [0.9, 0, r]).card.target!]++
+      expect(counts[0]).toBe(0)
+      for (const c of counts.slice(1)) expect(Math.abs(c / runs - 1 / (n - 1))).toBeLessThan(0.04)
     }
   })
+
+  it('varies the pairings from game to game', () => {
+    const plays = fc.sample(steps, { numRuns: 50, seed: 3 }).map((taps) =>
+      play(5, 'standard', taps)
+        .game!.log.filter((e) => e.outcome === 'answered')
+        .map((e) => `${e.drawer}>${e.card.target}`)
+        .join(' '),
+    )
+    expect(new Set(plays).size).toBeGreaterThan(40)
+  })
+
+  it('shuffles every card into a pile exactly once', () =>
+    fc.assert(
+      fc.property(fc.array(fc.integer(), { maxLength: 50 }), roll, (xs, r) => {
+        expect(R.shuffle(xs, r).sort()).toEqual([...xs].sort())
+      }),
+    ))
 
   it('reads a question about "you" to someone else, who answers', () => {
     let s = reduce(started(['A', 'B', 'C']), { id: 'level/begin' })
     for (let t = 0; t < 3; t++) s = reduce(dealt(s), { id: 'card/done' })
     s = reduce(s, { id: 'level/begin' })
-    s = dealt(s, [0.9, 0, 0.5])
+    s = dealtPrompt(s, DECK[1].find((p) => p.kind === 'read')!)
     const card = s.game!.card!
-    expect(card.prompt.kind).toBe('self')
     expect(card.target).not.toBe(s.game!.current)
-    const turn = S.selectTurn(s)!
     const target = s.game!.players[card.target!].name
-    expect(turn.card!.instruction.map((p) => p.text).join('')).toBe(`Read it to ${target} — they answer.`)
+    expect(S.selectTurn(s)!.card!.instruction.map((p) => p.text).join('')).toBe(`Read it to ${target} — they answer.`)
     s = reduce(s, { id: 'card/done' })
     expect(s.game!.players[card.target!].askedAbout).toBe(2)
+  })
+
+  it('tells the drawer when they are the one speaking', () => {
+    let s = reduce(started(['A', 'B', 'C']), { id: 'level/skip' }, { id: 'level/begin' })
+    s = dealtPrompt(s, DECK[1].find((p) => p.kind === 'tell')!)
+    const target = s.game!.players[s.game!.card!.target!].name
+    expect(S.selectTurn(s)!.card!.instruction.map((p) => p.text).join('')).toBe(`You speak — ${target} listens.`)
   })
 
   it('undoes the taps that move the game on, newest first', () => {
@@ -142,10 +307,9 @@ describe('rules', () => {
     expect(S.selectTurn(waiting)!.card).toBeNull()
     expect(S.selectTurn(waiting)!.sigil).toBe('fool')
     expect(S.selectTurn(drawn)!.key).toBe(S.selectTurn(waiting)!.key)
-    const { card, used } = R.draw(drawn.game!, [0.9, 0.5, 0], drawn.game!.card!.prompt.id)
-    const passed = reduce(drawn, { id: 'card/dealt', data: { card, used, isPass: true } })
-    expect(S.selectTurn(passed)!.card!.redraw).toBe(true)
-    expect(S.selectTurn(passed)!.key).not.toBe(S.selectTurn(drawn)!.key)
+    const redrawn = passed(drawn)
+    expect(S.selectTurn(redrawn)!.card!.redraw).toBe(true)
+    expect(S.selectTurn(redrawn)!.key).not.toBe(S.selectTurn(drawn)!.key)
   })
 
   it('seeds the card art once per turn, steady across the draw, fresh on a pass', () => {
@@ -155,9 +319,8 @@ describe('rules', () => {
     expect(seed).toBeGreaterThanOrEqual(0)
     expect(seed).toBeLessThan(1)
     expect(S.selectTurn(drawn)!.seed).toBe(seed)
-    const { card, used } = R.draw(drawn.game!, [0.9, 0.5, 0], drawn.game!.card!.prompt.id)
-    const passed = reduce(drawn, { id: 'card/dealt', data: { card, used, isPass: true } })
-    expect(S.selectTurn(passed)!.seed).not.toBe(seed)
+    const redrawn = passed(drawn)
+    expect(S.selectTurn(redrawn)!.seed).not.toBe(seed)
     const nextTurn = reduce(drawn, { id: 'card/done' })
     expect(S.selectTurn(nextTurn)!.seed).not.toBe(seed)
     expect(R.cardSeed({ ...nextTurn.game!, startedAt: 1 })).not.toBe(S.selectTurn(nextTurn)!.seed)
@@ -167,8 +330,7 @@ describe('rules', () => {
     let s = reduce(started(['A', 'B']), { id: 'level/begin' })
     s = reduce(dealt(s), { id: 'card/done' })
     s = dealt(s)
-    const { card, used } = R.draw(s.game!, [0.9, 0.5, 0], s.game!.card!.prompt.id)
-    s = reduce(s, { id: 'card/dealt', data: { card, used, isPass: true } })
+    s = passed(s)
     s = reduce(s, { id: 'level/skip' })
     s = dealt(reduce(s, { id: 'level/begin' }))
     expect(s.game!.log.map((e) => [e.level, e.drawer, e.outcome])).toEqual([

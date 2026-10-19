@@ -43,7 +43,7 @@ function reduceGame(game: Game, action: Action): { game: Game; undoable: boolean
     case 'level/skip':
       return { game: R.goDeeper(game), undoable: true }
     case 'card/dealt':
-      return { game: R.deal(game, action.data.card, action.data.used, action.data.isPass), undoable: true }
+      return { game: R.deal(game, action.data.card, action.data.piles, action.data.isPass), undoable: true }
     case 'card/done':
       return { game: R.done(game), undoable: true }
     case 'game/finished':

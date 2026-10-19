@@ -6,7 +6,8 @@ import { combinators, type Process } from '@zaymonoid/katha'
 import { Clock, Effect, Random, Stream, SubscriptionRef } from 'effect'
 import * as R from './rules'
 import { selectDebugDump } from './selectors'
-import type { Action, Game, State } from './state'
+import { type Prompt, SUBJECT } from '../deck'
+import type { Action, DrawnCard, Game, State } from './state'
 
 const { takeLeading } = combinators<State, Action>()
 
@@ -54,8 +55,8 @@ const drawCard = takeLeading(['card/draw'], (_, ctx) =>
   Effect.gen(function* () {
     const { game } = yield* ctx.select()
     if (!game || !R.canDraw(game)) return
-    const { card, used } = R.draw(game, yield* rolls)
-    yield* ctx.put({ id: 'card/dealt', data: { card, used, isPass: false } })
+    const { card, piles } = R.draw(game, yield* rolls)
+    yield* ctx.put({ id: 'card/dealt', data: { card, piles, isPass: false } })
   }),
 )
 
@@ -63,8 +64,8 @@ const passCard = takeLeading(['card/pass'], (_, ctx) =>
   Effect.gen(function* () {
     const { game } = yield* ctx.select()
     if (!game || !R.canPass(game)) return
-    const { card, used } = R.draw(game, yield* rolls, game.card?.prompt.id)
-    yield* ctx.put({ id: 'card/dealt', data: { card, used, isPass: true } })
+    const { card, piles } = R.draw(game, yield* rolls)
+    yield* ctx.put({ id: 'card/dealt', data: { card, piles, isPass: true } })
   }),
 )
 
@@ -107,12 +108,31 @@ const load = Effect.sync((): Game | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     const game = raw ? (JSON.parse(raw) as Game) : null
-    // Games saved before the draw log existed start with an empty one.
-    return game && game.phase !== 'summary' ? { ...game, log: game.log ?? [] } : null
+    return game && game.phase !== 'summary' ? migrate(game) : null
   } catch {
     return null
   }
 })
+
+/**
+ * Bring a game saved by an older version up to date: no draw log yet (start
+ * an empty one), a `used` list instead of piles (piles are shuffled on first
+ * draw), or cards from before `self` was renamed `read` and every card had
+ * a subject.
+ */
+function migrate({ used: _, ...game }: Game & { used?: unknown }): Game {
+  const prompt = (p: Prompt): Prompt => {
+    const kind = (p.kind as string) === 'self' ? 'read' : p.kind
+    return { ...p, kind, subject: p.subject ?? SUBJECT[kind] }
+  }
+  const card = (c: DrawnCard): DrawnCard => ({ ...c, prompt: prompt(c.prompt) })
+  return {
+    ...game,
+    piles: game.piles ?? {},
+    card: game.card && card(game.card),
+    log: (game.log ?? []).map((e) => ({ ...e, card: card(e.card) })),
+  }
+}
 
 const store = (game: Game | null) =>
   Effect.sync(() => {

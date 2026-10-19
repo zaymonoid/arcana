@@ -23,7 +23,10 @@ export interface DrawnCard {
   readonly redraw: boolean
 }
 
-/** One card as it was dealt, in draw order, for the debug dump. */
+/**
+ * One card as it was dealt, in draw order. Besides the debug dump, the rules
+ * read it to keep the spotlight even in a two-player game.
+ */
 export interface LogEntry {
   readonly level: number
   readonly drawer: number
@@ -31,6 +34,9 @@ export interface LogEntry {
   /** How it left the table; null while it's still showing. */
   readonly outcome: 'answered' | 'passed' | 'skipped' | null
 }
+
+/** Prompt ids still in each pile, top first, keyed by `pileId`. Empty until a pile is first drawn from. */
+export type Piles = Readonly<Record<string, readonly string[]>>
 
 export interface Game {
   readonly phase: Phase
@@ -40,7 +46,8 @@ export interface Game {
   readonly turnsInLevel: number
   readonly current: number
   readonly card: DrawnCard | null
-  readonly used: readonly string[]
+  /** What's left of each shuffled pile, top card first (see `pileId`). */
+  readonly piles: Piles
   readonly draws: number
   readonly answered: number
   readonly passed: number
@@ -109,7 +116,7 @@ export type Action =
   | { id: 'level/skip' }
   | { id: 'card/draw' }
   | { id: 'card/pass' }
-  | { id: 'card/dealt'; data: { card: DrawnCard; used: string[]; isPass: boolean } }
+  | { id: 'card/dealt'; data: { card: DrawnCard; piles: Piles; isPass: boolean } }
   | { id: 'card/done' }
   // Menu
   | { id: 'menu/open' }
